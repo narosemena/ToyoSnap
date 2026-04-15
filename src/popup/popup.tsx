@@ -57,7 +57,7 @@ function Popup() {
   if (loading) return null;
 
   return (
-    <div className="flex flex-col gap-3 p-4 min-w-60 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">
+    <div className="flex flex-col gap-3 p-4 min-w-60 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
       <div className="flex items-center justify-between">
         <span className="text-sm font-semibold tracking-wide uppercase opacity-70">ToyoSnap</span>
         <StatusBadge isRecording={isRecording} />
@@ -85,7 +85,7 @@ function Popup() {
       <button
         type="button"
         onClick={openEditor}
-        className="text-xs text-center text-blue-600 dark:text-blue-400 hover:underline mt-2 transition-opacity hover:opacity-80"
+        className="text-xs text-center text-blue-600 dark:text-blue-400 hover:underline mt-2 transition-opacity duration-150 hover:opacity-80 cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 rounded"
       >
         Open Vault & Editor
       </button>

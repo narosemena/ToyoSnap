@@ -122,7 +122,7 @@ export function ExportPanel() {
                 </div>
                 {busy && (
                   <svg
-                    className="animate-spin h-4 w-4 text-blue-600 shrink-0 mt-0.5"
+                    className="motion-safe:animate-spin h-4 w-4 text-blue-600 shrink-0 mt-0.5"
                     xmlns="http://www.w3.org/2000/svg"
                     fill="none"
                     viewBox="0 0 24 24"

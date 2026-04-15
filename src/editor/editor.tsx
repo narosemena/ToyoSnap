@@ -95,7 +95,7 @@ function Editor() {
 
       <div className="flex h-screen">
         {/* Sidebar */}
-        <aside className="w-64 shrink-0 border-r border-gray-200 dark:border-gray-700 p-4 flex flex-col gap-4">
+        <aside className="w-48 lg:w-64 shrink-0 border-r border-gray-200 dark:border-gray-700 p-4 flex flex-col gap-4">
           <div className="flex items-center justify-between">
             <span className="font-semibold text-sm">ToyoSnap</span>
             <PurgeMemoryButton />
@@ -173,7 +173,7 @@ function Editor() {
                 </section>
 
                 {/* Right panel */}
-                <aside className="w-80 shrink-0 border-l border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden">
+                <aside className="w-64 lg:w-80 shrink-0 border-l border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden">
                   {/* Tab bar */}
                   <div
                     className="flex border-b border-gray-200 dark:border-gray-700"
@@ -185,10 +185,12 @@ function Editor() {
                         key={tab}
                         role="tab"
                         type="button"
+                        id={`tab-${tab}`}
                         aria-selected={rightTab === tab}
+                        aria-controls={`panel-${tab}`}
                         onClick={() => setRightTab(tab)}
                         className={[
-                          "flex-1 py-2 text-xs font-medium capitalize transition-colors",
+                          "flex-1 py-2 text-xs font-medium capitalize transition-colors duration-150 cursor-pointer",
                           "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-blue-500",
                           rightTab === tab
                             ? "border-b-2 border-blue-500 text-blue-600 dark:text-blue-400"
@@ -200,22 +202,39 @@ function Editor() {
                     ))}
                   </div>
 
-                  {/* Tab content */}
+                  {/* Tab panels — each linked to its tab via id + aria-labelledby */}
                   <div className="flex-1 overflow-auto p-4">
-                    {rightTab === "pii" && (
+                    <div
+                      id="panel-pii"
+                      role="tabpanel"
+                      aria-labelledby="tab-pii"
+                      hidden={rightTab !== "pii"}
+                    >
                       <PIICanvas
                         step={steps.find((s) => s.stepIndex === activeStepIndex) ?? steps[0] ?? null}
                       />
-                    )}
-                    {rightTab === "export" && <ExportPanel />}
-                    {rightTab === "import" && (
+                    </div>
+                    <div
+                      id="panel-export"
+                      role="tabpanel"
+                      aria-labelledby="tab-export"
+                      hidden={rightTab !== "export"}
+                    >
+                      <ExportPanel />
+                    </div>
+                    <div
+                      id="panel-import"
+                      role="tabpanel"
+                      aria-labelledby="tab-import"
+                      hidden={rightTab !== "import"}
+                    >
                       <BulkImportDropzone
                         sessionId={activeSessionId}
                         onImported={() => {
                           void getStepsBySession(activeSessionId).then(setSteps);
                         }}
                       />
-                    )}
+                    </div>
                   </div>
                 </aside>
               </div>

@@ -14,7 +14,25 @@
       "Bash(python -c \"import json,sys; m=json.load\\(sys.stdin\\); print\\(json.dumps\\(m.get\\('action',{}\\), indent=2\\)\\); print\\('---'\\); print\\(json.dumps\\([p for p in m.get\\('web_accessible_resources',[]\\)], indent=2\\)\\)\")",
       "Bash(node -e \"const p = require\\('./node_modules/vite-plugin-web-extension/package.json'\\); console.log\\(p.version\\)\")",
       "Bash(npx vitest *)",
-      "Bash(node *)"
+      "Bash(node *)",
+      "Bash(python \"C:\\\\Users\\\\norma\\\\.claude\\\\skills\\\\ui-ux-pro-max\\\\scripts\\\\search.py\" \"browser extension tool productivity professional instructional design dark\" --design-system -p \"ToyoSnap\" -f markdown)",
+      "Read(//c/Users/norma/src/**)",
+      "Read(//c/Users/norma/.claude/**)",
+      "Bash(python \"C:/Users/norma/.claude/skills/antigravity-awesome-skills/plugins/antigravity-bundle-web-designer/skills/ui-ux-pro-max/scripts/search.py\" \"browser extension tool productivity professional instructional design dark\" --design-system -p \"ToyoSnap\" -f markdown)",
+      "Bash(python \"C:/Users/norma/.claude/skills/antigravity-awesome-skills/plugins/antigravity-bundle-web-designer/skills/ui-ux-pro-max/scripts/search.py\" \"accessibility keyboard nav form feedback loading\" --domain ux -n 20)",
+      "Bash(python \"C:/Users/norma/.claude/skills/antigravity-awesome-skills/plugins/antigravity-bundle-web-designer/skills/ui-ux-pro-max/scripts/search.py\" \"professional dark minimal tool\" --domain style -n 8)",
+      "Bash(python \"C:/Users/norma/.claude/skills/antigravity-awesome-skills/plugins/antigravity-bundle-web-designer/skills/ui-ux-pro-max/scripts/search.py\" \"productivity tool professional dark\" --domain color -n 8)",
+      "Bash(python \"C:/Users/norma/.claude/skills/antigravity-awesome-skills/plugins/antigravity-bundle-web-designer/skills/ui-ux-pro-max/scripts/search.py\" \"professional tool mono\" --domain typography -n 8)",
+      "Bash(echo \"EXIT: $?\")",
+      "Bash(set PYTHONIOENCODING=utf-8)",
+      "Bash(python -c \"import os; os.environ['PYTHONIOENCODING']='utf-8'; import sys; sys.stdout.reconfigure\\(encoding='utf-8'\\)\")",
+      "Bash(python -X utf8 \"C:/Users/norma/.claude/skills/antigravity-awesome-skills/plugins/antigravity-bundle-web-designer/skills/ui-ux-pro-max/scripts/search.py\" \"browser extension tool productivity professional instructional design dark\" --design-system -p \"ToyoSnap\" -f markdown)",
+      "Bash(python -c \"import sys; sys.stdout.buffer.write\\(sys.stdin.buffer.read\\(\\)\\)\")",
+      "Bash(python -X utf8 \"C:/Users/norma/.claude/skills/antigravity-awesome-skills/plugins/antigravity-bundle-web-designer/skills/ui-ux-pro-max/scripts/search.py\" \"accessibility keyboard nav form feedback loading\" --domain ux -n 20)",
+      "Bash(python -X utf8 \"C:/Users/norma/.claude/skills/antigravity-awesome-skills/plugins/antigravity-bundle-web-designer/skills/ui-ux-pro-max/scripts/search.py\" \"professional dark minimal tool\" --domain style -n 8)",
+      "Bash(python -c \"import sys,json; [print\\(e.get\\('content',''\\)\\) for e in json.load\\(sys.stdin\\) if e.get\\('type'\\)=='tool_result']\")",
+      "Bash(python -X utf8 \"C:/Users/norma/.claude/skills/antigravity-awesome-skills/plugins/antigravity-bundle-web-designer/skills/ui-ux-pro-max/scripts/search.py\" \"productivity tool professional dark\" --domain color -n 8)",
+      "mcp__claude_ai_Figma__generate_diagram"
     ]
   }
 }

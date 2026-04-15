@@ -44,7 +44,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
           <button
             type="button"
             onClick={this.reset}
-            className="mt-3 text-xs underline text-red-700 dark:text-red-300 hover:no-underline"
+            className="mt-3 text-xs underline text-red-700 dark:text-red-300 hover:no-underline cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500"
           >
             Reload panel
           </button>

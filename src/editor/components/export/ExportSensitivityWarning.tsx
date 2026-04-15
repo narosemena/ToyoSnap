@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useEditorStore } from "../../store/editor-store";
 
 interface Props {
@@ -9,6 +9,12 @@ interface Props {
 export function ExportSensitivityWarning({ onConfirm, onCancel }: Props) {
   const [checked, setChecked] = useState(false);
   const acknowledge = useEditorStore((s) => s.acknowledgeExportSensitivity);
+  const cancelRef = useRef<HTMLButtonElement>(null);
+
+  // Move focus to Cancel on mount so keyboard users land inside the dialog
+  useEffect(() => {
+    cancelRef.current?.focus();
+  }, []);
 
   function handleConfirm() {
     if (!checked) return;
@@ -45,9 +51,10 @@ export function ExportSensitivityWarning({ onConfirm, onCancel }: Props) {
         </label>
         <div className="mt-6 flex gap-3 justify-end">
           <button
+            ref={cancelRef}
             type="button"
             onClick={onCancel}
-            className="px-4 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
+            className="px-4 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
           >
             Cancel
           </button>
@@ -55,7 +62,7 @@ export function ExportSensitivityWarning({ onConfirm, onCancel }: Props) {
             type="button"
             onClick={handleConfirm}
             disabled={!checked}
-            className="px-4 py-2 text-sm rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-medium"
+            className="px-4 py-2 text-sm rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
           >
             Export
           </button>

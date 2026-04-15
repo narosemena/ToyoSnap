@@ -41,7 +41,7 @@ function StepThumbnail({
       type="button"
       onClick={onClick}
       aria-label={`Step ${step.stepIndex}: ${step.pageTitle || "Untitled"}`}
-      aria-pressed={isActive}
+      aria-current={isActive ? "step" : undefined}
       className={[
         "relative flex-none w-24 rounded-lg border-2 p-1 text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500",
         isActive
