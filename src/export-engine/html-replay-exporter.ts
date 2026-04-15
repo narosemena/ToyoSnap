@@ -1,10 +1,12 @@
 /**
  * Exports a self-contained HTML file with inlined rrweb-player.
- * The rrweb-player iframe uses sandbox="allow-scripts" per the CSP plan.
- * All rrweb event data is embedded inline  -  no external requests.
+ * All rrweb event data, player JS, and player CSS are embedded inline.
+ * Zero external requests — safe for Zero-Egress policy.
  */
 import { getStepsBySession } from "@/storage/ephemeral-db";
-import type { CaptureStep } from "@/types/capture";
+// Vite ?raw imports bundle the file content as a string at build time
+import rrwebPlayerJs from "rrweb-player/dist/index.js?raw";
+import rrwebPlayerCss from "rrweb-player/dist/style.css?raw";
 
 function buildPageTransition(hostname: string): string {
   return `<div class="toyosnap-page-transition">Navigated to: <strong>${hostname}</strong></div>`;
@@ -49,22 +51,17 @@ export async function exportHtmlReplay(sessionId: string): Promise<Blob> {
     .toyosnap-page-transition { width: 100%; max-width: 800px; padding: 8px 16px; margin: 16px 0; background: #2a2a00; border: 1px solid #666600; border-radius: 4px; color: #cccc00; font-size: 13px; }
     #player { width: 800px; }
   </style>
+  <style>${rrwebPlayerCss}</style>
 </head>
 <body>
   <div id="player"></div>
+  <script>${rrwebPlayerJs}</script>
   <script>
-    // Inline rrweb-player  -  loaded from extension assets
-    // In self-contained export this would be fully inlined
     window.__TOYOSNAP_EVENTS__ = ${eventsJson};
-  </script>
-  <script src="rrweb-player.js"></script>
-  <script>
-    if (typeof rrwebPlayer !== 'undefined') {
-      new rrwebPlayer({
-        target: document.getElementById('player'),
-        props: { events: window.__TOYOSNAP_EVENTS__, width: 800, height: 600 }
-      });
-    }
+    new rrwebPlayer({
+      target: document.getElementById('player'),
+      props: { events: window.__TOYOSNAP_EVENTS__, width: 800, height: 600 }
+    });
   </script>
 </body>
 </html>`;
