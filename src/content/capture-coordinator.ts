@@ -1,58 +1,85 @@
-/**
- * Thin coordinator that initializes the correct capture engine for
- * the current page. Tracks whether capture is active to make
- * BEGIN_CAPTURE and RESUME_CAPTURE idempotent.
- */
+import { record } from "rrweb";
 import type { CaptureMode } from "@/types/capture";
-import { VideoCapture } from "@/capture/video-capture";
-import { ImageCapture } from "@/capture/image-capture";
-import { RrwebCapture } from "@/capture/rrweb-capture";
-import { SvgCapture } from "@/capture/svg-capture";
-import { CursorTracker } from "@/capture/cursor-tracker";
-import type { BaseCapture } from "@/capture/base-capture";
 
-let activeEngine: BaseCapture | null = null;
-let cursorTracker: CursorTracker | null = null;
+// State Management
+let stopFn: (() => void) | null = null;
+let eventBuffer: unknown[] = [];
+let flushIntervalId: ReturnType<typeof setInterval> | null = null;
+let activeSessionId: string | null = null;
 
-export function isCapturing(): boolean {
-  return activeEngine !== null;
-}
+// Batching Constants
+const FLUSH_INTERVAL_MS = 5000; // Handoff to SW every 5 seconds
+const BATCH_SIZE_LIMIT = 500;   // Eager handoff if user acts quickly
 
-export async function startCapture(
-  sessionId: string,
-  mode: CaptureMode,
-  captureCursor: boolean
-): Promise<void> {
-  if (activeEngine) return; // idempotent
+export const isCapturing = () => stopFn !== null;
 
-  switch (mode) {
-    case "video":
-      activeEngine = new VideoCapture(sessionId);
-      break;
-    case "image-chain":
-      activeEngine = new ImageCapture(sessionId);
-      break;
-    case "rrweb":
-      activeEngine = new RrwebCapture(sessionId);
-      break;
-    case "svg":
-      activeEngine = new SvgCapture(sessionId);
-      break;
+export const startCapture = async (sessionId: string, mode: CaptureMode, captureCursor: boolean) => {
+  if (isCapturing()) return;
+
+  activeSessionId = sessionId;
+  eventBuffer = []; // Reset local buffer
+
+  // 1. The Observer: Initialize rrweb
+  stopFn = record({
+    emit(event) {
+      // 2. The Buffer: Push to local array instead of immediate send
+      eventBuffer.push(event);
+
+      // Eager flush if we hit the limit early
+      if (eventBuffer.length >= BATCH_SIZE_LIMIT) {
+        flushBuffer();
+      }
+    },
+    // Security Gate: Mask passwords as validated by our Playwright test
+    maskInputOptions: {
+      password: true,
+    },
+    recordCanvas: mode === "rrweb",
+    // Only capture cursor if requested
+    slimDOMOptions: captureCursor ? {} : "all", 
+  });
+
+  // 3. The Handoff: Throttle flushes to the Service Worker
+  flushIntervalId = setInterval(flushBuffer, FLUSH_INTERVAL_MS);
+
+  // Expose events globally specifically for our password-masking.spec.ts to verify
+  (window as Record<string, unknown>).__toyosnap_rrweb_events = eventBuffer;
+};
+
+export const stopCapture = async () => {
+  if (!isCapturing()) return;
+
+  if (stopFn) {
+    stopFn();
+    stopFn = null;
   }
 
-  await activeEngine.start();
-
-  if (captureCursor) {
-    cursorTracker = new CursorTracker();
-    cursorTracker.start();
+  if (flushIntervalId) {
+    clearInterval(flushIntervalId);
+    flushIntervalId = null;
   }
-}
 
-export async function stopCapture(): Promise<void> {
-  if (!activeEngine) return;
-  await activeEngine.stop();
-  activeEngine = null;
+  // Final flush to ensure no events are left behind
+  flushBuffer();
+  activeSessionId = null;
+};
 
-  cursorTracker?.stop();
-  cursorTracker = null;
-}
+const flushBuffer = () => {
+  if (eventBuffer.length === 0 || !activeSessionId) return;
+
+  // Clone buffer and clear original immediately to prevent race conditions
+  const batch = [...eventBuffer];
+  eventBuffer = []; 
+
+  chrome.runtime.sendMessage({
+    type: "RRWEB_BATCH",
+    payload: {
+      sessionId: activeSessionId,
+      events: batch
+    }
+  }).catch(() => {
+    // If SW is asleep, Chrome will wake it for the next message.
+    // In a strict Zero-Egress environment, we drop rather than fallback to unencrypted local storage.
+    console.warn("ToyoSnap: Dropped batch, Service Worker unavailable.");
+  });
+};

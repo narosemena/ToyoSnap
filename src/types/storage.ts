@@ -16,7 +16,7 @@ export interface IDBSchema {
   actionLogs:    { key: string;                   value: ActionStep[] };
 }
 
-// Stored in chrome.storage.session — control plane only, never capture data
+// Stored in chrome.storage.session â€” control plane only, never capture data
 export interface SessionControlPlane {
   isRecording: boolean;
   captureMode: CaptureMode;

@@ -57,6 +57,6 @@ export class VideoCapture implements BaseCapture {
   }
 
   async captureStep(_stepIndex: number): Promise<void> {
-    // Video mode captures continuously — individual step triggers are no-ops
+    // Video mode captures continuously â€” individual step triggers are no-ops
   }
 }

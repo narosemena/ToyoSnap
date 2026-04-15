@@ -29,7 +29,7 @@ export const ZERO_EGRESS_CSP: CSPPolicy = {
   "style-src": ["'self'", "'unsafe-inline'"],
   "img-src": ["'self'", "blob:", "data:"],
   "media-src": ["'self'", "blob:"],
-  "connect-src": ["'self'"], // never relax — Zero-Egress guarantee
+  "connect-src": ["'self'"], // never relax â€” Zero-Egress guarantee
   "font-src": ["'self'", "data:"],
   "object-src": ["'none'"],
   "frame-src": ["'self'", "blob:"],

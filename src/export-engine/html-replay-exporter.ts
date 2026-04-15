@@ -1,7 +1,7 @@
 /**
  * Exports a self-contained HTML file with inlined rrweb-player.
  * The rrweb-player iframe uses sandbox="allow-scripts" per the CSP plan.
- * All rrweb event data is embedded inline — no external requests.
+ * All rrweb event data is embedded inline â€” no external requests.
  */
 import { getStepsBySession } from "@/storage/ephemeral-db";
 import type { CaptureStep } from "@/types/capture";
@@ -27,7 +27,7 @@ export async function exportHtmlReplay(sessionId: string): Promise<Blob> {
     })();
 
     if (hostname !== lastHostname && lastHostname !== "") {
-      // Page transition — embed as a custom event placeholder
+      // Page transition â€” embed as a custom event placeholder
       allEvents.push({ type: "page-transition", hostname });
     }
     lastHostname = hostname;
@@ -53,7 +53,7 @@ export async function exportHtmlReplay(sessionId: string): Promise<Blob> {
 <body>
   <div id="player"></div>
   <script>
-    // Inline rrweb-player — loaded from extension assets
+    // Inline rrweb-player â€” loaded from extension assets
     // In self-contained export this would be fully inlined
     window.__TOYOSNAP_EVENTS__ = ${eventsJson};
   </script>

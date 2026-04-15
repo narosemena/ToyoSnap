@@ -2,7 +2,7 @@ import type { SyntheticTemplate, TemplateField } from "@/types/template";
 
 /**
  * Walks the DOM to find all fillable fields (inputs, selects, textareas, editable cells).
- * Strips actual field values — only metadata is captured.
+ * Strips actual field values â€” only metadata is captured.
  * Fields are keyed by data-rrweb-id (stable) when present.
  */
 export function parseTemplate(sessionId: string): SyntheticTemplate {

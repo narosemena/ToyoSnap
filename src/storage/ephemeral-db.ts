@@ -1,7 +1,7 @@
 /**
  * CRUD layer for IDB. All blob and rrweb event writes/reads go through
  * idb-crypto.ts transparently. No other module calls idb directly for
- * the "blobs" or rrweb event data — they all use this module.
+ * the "blobs" or rrweb event data â€” they all use this module.
  */
 import { getDB } from "@/lib/idb";
 import { getOrCreateSessionKey, encrypt, decrypt } from "@/security/idb-crypto";
@@ -9,7 +9,7 @@ import type { CaptureSession, CaptureStep, ActionStep } from "@/types/capture";
 import type { LedgerEntry } from "@/types/ledger";
 import type { DesignSystem } from "@/types/design-system";
 
-// ── Sessions ─────────────────────────────────────────────────────────────────
+// â”€â”€ Sessions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export async function putSession(session: CaptureSession): Promise<void> {
   const db = await getDB();
@@ -31,7 +31,7 @@ export async function deleteSession(id: string): Promise<void> {
   await db.delete("sessions", id);
 }
 
-// ── Steps ─────────────────────────────────────────────────────────────────────
+// â”€â”€ Steps â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export async function putStep(step: CaptureStep): Promise<void> {
   const db = await getDB();
@@ -85,7 +85,7 @@ export async function countStepsBySession(sessionId: string): Promise<number> {
   return steps.length;
 }
 
-// ── Blobs (encrypted at rest) ────────────────────────────────────────────────
+// â”€â”€ Blobs (encrypted at rest) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export async function putBlob(blobId: string, data: ArrayBuffer): Promise<void> {
   const db = await getDB();
@@ -107,7 +107,7 @@ export async function deleteBlob(blobId: string): Promise<void> {
   await db.delete("blobs", blobId);
 }
 
-// ── Global Ledger ─────────────────────────────────────────────────────────────
+// â”€â”€ Global Ledger â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export async function putGlobalLedgerEntry(entry: LedgerEntry): Promise<void> {
   const db = await getDB();
@@ -129,7 +129,7 @@ export async function deleteGlobalLedgerEntry(id: string): Promise<void> {
   await db.delete("globalLedger", id);
 }
 
-// ── Local Ledger ─────────────────────────────────────────────────────────────
+// â”€â”€ Local Ledger â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export async function putLocalLedgerEntry(
   sessionId: string,
@@ -152,7 +152,7 @@ export async function getLocalLedgerEntry(
   return db.get("localLedger", [sessionId, stepId, rrwebId]);
 }
 
-// ── Design Systems ────────────────────────────────────────────────────────────
+// â”€â”€ Design Systems â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export async function putDesignSystem(ds: DesignSystem): Promise<void> {
   const db = await getDB();
@@ -164,7 +164,7 @@ export async function getDesignSystem(sessionId: string): Promise<DesignSystem |
   return db.get("designSystems", sessionId);
 }
 
-// ── Action Logs ───────────────────────────────────────────────────────────────
+// â”€â”€ Action Logs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export async function putActionLog(sessionId: string, steps: ActionStep[]): Promise<void> {
   const db = await getDB();

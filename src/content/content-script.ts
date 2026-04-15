@@ -1,7 +1,7 @@
 /**
- * Content script — injected at document_idle into every page.
+ * Content script â€” injected at document_idle into every page.
  *
- * Two resume paths (idempotent — whichever fires first wins):
+ * Two resume paths (idempotent â€” whichever fires first wins):
  *  1. Push-resume: SW sends RESUME_CAPTURE via chrome.runtime.onMessage
  *  2. Self-resume fallback: proactively checks chrome.storage.session on
  *     document_idle in case the SW was sleeping and missed the tab update
@@ -10,7 +10,7 @@ import type { ExtensionMessage } from "@/types/messages";
 import type { CaptureMode } from "@/types/capture";
 import { startCapture, stopCapture, isCapturing } from "./capture-coordinator";
 
-// ── Push-resume: receive messages from SW ─────────────────────────────────────
+// â”€â”€ Push-resume: receive messages from SW â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 chrome.runtime.onMessage.addListener(
   (rawMsg: unknown, _sender: chrome.runtime.MessageSender, sendResponse: (r: unknown) => void) => {
@@ -46,7 +46,7 @@ chrome.runtime.onMessage.addListener(
   }
 );
 
-// ── Self-resume fallback: handles SW sleep on document_idle ──────────────────
+// â”€â”€ Self-resume fallback: handles SW sleep on document_idle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 void (async () => {
   if (isCapturing()) return; // push-resume already fired

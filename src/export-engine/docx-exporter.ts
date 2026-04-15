@@ -14,7 +14,7 @@ export async function exportDocx(sessionId: string): Promise<Blob> {
 
   children.push(
     new Paragraph({
-      text: `ToyoSnap Workflow — Session ${sessionId}`,
+      text: `ToyoSnap Workflow â€” Session ${sessionId}`,
       heading: HeadingLevel.TITLE,
     })
   );

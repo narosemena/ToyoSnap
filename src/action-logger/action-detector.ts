@@ -1,13 +1,13 @@
 /**
  * Detects user clicks and produces ActionStep records.
- * Label resolution order: aria-label → title → innerText (truncated 80 chars)
+ * Label resolution order: aria-label â†’ title â†’ innerText (truncated 80 chars)
  */
 import type { ActionStep } from "@/types/capture";
 
 const LABEL_MAX_LEN = 80;
 
 function truncate(s: string): string {
-  return s.length > LABEL_MAX_LEN ? s.slice(0, LABEL_MAX_LEN) + "…" : s;
+  return s.length > LABEL_MAX_LEN ? s.slice(0, LABEL_MAX_LEN) + "â€¦" : s;
 }
 
 function resolveLabel(el: Element): string {

@@ -4,35 +4,46 @@ import { ModeSelector } from "./components/ModeSelector";
 import { RecordButton } from "./components/RecordButton";
 import { CursorToggle } from "./components/CursorToggle";
 import { StatusBadge } from "./components/StatusBadge";
+import { useSession } from "./hooks/useSession";
 import type { CaptureMode } from "@/types/capture";
 import type { ExtensionMessage } from "@/types/messages";
 import "../styles/globals.css";
 
 function Popup() {
+  // Local state for configuration BEFORE recording starts
   const [mode, setMode] = React.useState<CaptureMode>("rrweb");
   const [captureCursor, setCaptureCursor] = React.useState(true);
-  const [isRecording, setIsRecording] = React.useState(false);
 
-  // Sync recording state from chrome.storage.session on mount
-  React.useEffect(() => {
-    void chrome.storage.session.get("toyosnap_session").then((result) => {
-      const plane = result["toyosnap_session"] as { isRecording?: boolean } | undefined;
-      if (plane?.isRecording) setIsRecording(true);
-    });
-  }, []);
+  // Hook handles global recording state synced with Service Worker
+  const { 
+    isRecording, 
+    captureMode, 
+    captureCursor: sessionCursor, 
+    loading, 
+    refreshState 
+  } = useSession();
+
+  /**
+   * UI Logic: If we are recording, the UI should reflect the settings 
+   * used when the session started. If not, it shows the local selection.
+   */
+  const activeMode = isRecording && captureMode ? captureMode : mode;
+  const activeCursor = isRecording && sessionCursor !== undefined ? sessionCursor : captureCursor;
 
   function handleToggleRecord() {
     if (isRecording) {
       const msg: ExtensionMessage = { type: "STOP_CAPTURE" };
-      chrome.runtime.sendMessage(msg);
-      setIsRecording(false);
+      chrome.runtime.sendMessage(msg, () => {
+        // Optional: Small delay to let the SW finish vaulting before UI refresh
+        setTimeout(refreshState, 50);
+      });
     } else {
       const msg: ExtensionMessage = {
         type: "START_CAPTURE",
         payload: { mode, captureCursor },
       };
       chrome.runtime.sendMessage(msg, () => {
-        setIsRecording(true);
+        refreshState();
       });
     }
   }
@@ -42,28 +53,47 @@ function Popup() {
     void chrome.tabs.create({ url });
   }
 
+  // Prevent flicker while the hook performs the initial handshake with the SW
+  if (loading) return null;
+
   return (
-    <div className="flex flex-col gap-3 p-4">
+    <div className="flex flex-col gap-3 p-4 min-w-60 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">
       <div className="flex items-center justify-between">
-        <span className="text-sm font-semibold tracking-wide">ToyoSnap</span>
+        <span className="text-sm font-semibold tracking-wide uppercase opacity-70">ToyoSnap</span>
         <StatusBadge isRecording={isRecording} />
       </div>
 
-      <ModeSelector value={mode} onChange={setMode} disabled={isRecording} />
-      <CursorToggle checked={captureCursor} onChange={setCaptureCursor} disabled={isRecording} />
+      <ModeSelector 
+        value={activeMode} 
+        onChange={setMode} 
+        disabled={isRecording} 
+      />
+      
+      <CursorToggle 
+        checked={activeCursor} 
+        onChange={setCaptureCursor} 
+        disabled={isRecording} 
+      />
 
-      <RecordButton isRecording={isRecording} onClick={handleToggleRecord} />
+      <div className="mt-2">
+        <RecordButton 
+          isRecording={isRecording} 
+          onClick={handleToggleRecord} 
+        />
+      </div>
 
       <button
         type="button"
         onClick={openEditor}
-        className="text-xs text-center text-blue-600 dark:text-blue-400 hover:underline mt-1"
+        className="text-xs text-center text-blue-600 dark:text-blue-400 hover:underline mt-2 transition-opacity hover:opacity-80"
       >
-        Open Editor
+        Open Vault & Editor
       </button>
     </div>
   );
 }
 
-const root = document.getElementById("root")!;
-createRoot(root).render(<Popup />);
+const rootElement = document.getElementById("root");
+if (rootElement) {
+  createRoot(rootElement).render(<Popup />);
+}

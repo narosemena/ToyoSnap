@@ -5,7 +5,12 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "allowSyntheticDefaultImports": true,
-    "strict": true
+    "strict": true,
+    "types": ["node", "chrome"]
   },
-  "include": ["vite.config.ts", "tailwind.config.ts", "postcss.config.ts"]
+  "include": [
+    "vite.config.ts",
+    "src/manifest.ts",
+    "tests/**/*.ts"
+  ]
 }

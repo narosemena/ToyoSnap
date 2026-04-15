@@ -1,6 +1,6 @@
 /**
  * Re-injects filled template values into DOM fields located by data-rrweb-id.
- * SECURITY: always uses dom-sanitizer — never innerHTML.
+ * SECURITY: always uses dom-sanitizer â€” never innerHTML.
  */
 import { injectSanitizedValue } from "@/security/dom-sanitizer";
 import type { SyntheticTemplate } from "@/types/template";
