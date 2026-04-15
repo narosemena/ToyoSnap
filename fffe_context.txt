@@ -1,2 +1,0 @@
-Context around FFFE:
-'ceived ${e} instead of CSS string`);if(this.css=e.toString(),this.css[0]==="\\uFEFF"||this.css[0]==="\ufffe"?(this.hasBOM=!0,this.css=this.css.slice(1)):this.hasBOM=!1,this.document=this.css,r.document&&(th'
