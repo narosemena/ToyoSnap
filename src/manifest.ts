@@ -6,7 +6,7 @@ export default {
   manifest_version: 3,
   name: "ToyoSnap",
   version: "0.1.0",
-  description: "Zero-Egress WorkflowCapture Engine â€” browser extension for instructional designers",
+  description: "Zero-Egress WorkflowCapture Engine  -  browser extension for instructional designers",
   permissions: ["storage", "activeTab", "scripting"],
   action: {
     default_popup: "src/popup/popup.html",

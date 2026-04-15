@@ -2,7 +2,7 @@ import DOMPurify from "dompurify";
 
 /**
  * Sanitizes a string value before injecting it into the DOM.
- * Strips all HTML tags â€” output is safe for textContent or input.value assignment.
+ * Strips all HTML tags  -  output is safe for textContent or input.value assignment.
  * Never use innerHTML with values from this module.
  */
 export function sanitizeForTextContent(value: string): string {
@@ -13,7 +13,7 @@ export function sanitizeForTextContent(value: string): string {
  * Injects a sanitized value into a DOM node located by data-rrweb-id.
  * Rules enforced:
  *   1. Value is stripped of all HTML via DOMPurify
- *   2. Always uses textContent or input.value â€” never innerHTML
+ *   2. Always uses textContent or input.value  -  never innerHTML
  *   3. Skips <script> and <iframe> nodes with a console.warn
  */
 export function injectSanitizedValue(node: Element, rawValue: string): void {

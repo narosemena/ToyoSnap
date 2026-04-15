@@ -2,9 +2,9 @@
  * Specificity rule: local override wins unconditionally over global.
  *
  * Lookup order per (sessionId, stepId, rrwebId):
- *  1. localLedger[sessionId, stepId, rrwebId] â†’ return if found
- *  2. globalLedger[rrwebId] â†’ return if found
- *  3. null â€” no operation applies
+ *  1. localLedger[sessionId, stepId, rrwebId] -> return if found
+ *  2. globalLedger[rrwebId] -> return if found
+ *  3. null  -  no operation applies
  */
 import type { LedgerEntry } from "@/types/ledger";
 import { getLocal } from "./local-override-ledger";

@@ -21,7 +21,7 @@ export async function purgeAll(): Promise<void> {
   await Promise.all(storeNames.map((name) => tx.objectStore(name).clear()));
   await tx.done;
 
-  // 3. Clear the session encryption key â€” any previously encrypted data is now unreadable
+  // 3. Clear the session encryption key  -  any previously encrypted data is now unreadable
   await clearSessionKey();
 
   // 4. Clear the SW control plane

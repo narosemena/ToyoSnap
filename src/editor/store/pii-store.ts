@@ -81,7 +81,7 @@ export const usePIIStore = create<PIIStore>()(
         if (!record) return;
         state.undoStack.push(record);
         // Re-apply: we only restore the operation ID reference here
-        // The actual IDB write was done in applyOperation â€” redo is in-memory only
+        // The actual IDB write was done in applyOperation  -  redo is in-memory only
       }),
 
     clearStacks: () =>

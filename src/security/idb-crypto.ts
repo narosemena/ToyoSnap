@@ -16,7 +16,7 @@ const IV_BYTE_LENGTH = 12; // 96-bit IV recommended for AES-GCM
 async function generateKey(): Promise<CryptoKey> {
   return crypto.subtle.generateKey(
     { name: "AES-GCM", length: 256 },
-    true, // extractable â€” needed to export to JWK for storage
+    true, // extractable  -  needed to export to JWK for storage
     ["encrypt", "decrypt"]
   );
 }
