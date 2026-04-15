@@ -10,10 +10,14 @@ import { VideoCapture } from "@/capture/video-capture";
 import { SvgCapture } from "@/capture/svg-capture";
 import { CursorTracker } from "@/capture/cursor-tracker";
 import { StepLogBuilder } from "@/action-logger/step-log-builder";
+import { extractDesignTokens } from "@/lib/design-extractor";
+import { detectAntiPatterns } from "@/lib/anti-pattern";
+import { getStepsBySession, putDesignSystem } from "@/storage/ephemeral-db";
 
 let engine: BaseCapture | null = null;
 let cursorTracker: CursorTracker | null = null;
 let stepLogger: StepLogBuilder | null = null;
+let activeSessionId: string | null = null;
 
 export const isCapturing = (): boolean => engine !== null;
 
@@ -42,6 +46,8 @@ export const startCapture = async (
       engine = new RrwebCapture(sessionId);
   }
 
+  activeSessionId = sessionId;
+
   // Cursor overlay (optional)
   if (captureCursor) {
     cursorTracker = new CursorTracker();
@@ -61,14 +67,42 @@ export const startCapture = async (
 };
 
 export const stopCapture = async (): Promise<void> => {
-  if (!engine) return;
+  if (!engine || !activeSessionId) return;
+
+  const sessionId = activeSessionId;
 
   await engine.stop();
   engine = null;
+  activeSessionId = null;
 
   stepLogger?.stop();
   stepLogger = null;
 
   cursorTracker?.stop();
   cursorTracker = null;
+
+  // Extract design tokens and detect anti-patterns from live DOM
+  const elements = Array.from(document.querySelectorAll("*")).slice(0, 500);
+  const { colors, typography, shadows, radii } = extractDesignTokens(elements);
+  const steps = await getStepsBySession(sessionId);
+  const antiPatterns = detectAntiPatterns(elements, steps.length);
+  const pageBreadcrumbs = steps.map((s) => ({
+    stepIndex: s.stepIndex,
+    url: s.url,
+    pageTitle: s.pageTitle,
+    urlSlug: new URL(s.url).pathname.replace(/\//g, "-").replace(/^-/, "") || "root",
+  }));
+
+  await putDesignSystem({
+    sessionId,
+    capturedAt: Date.now(),
+    colors,
+    typography,
+    shadows,
+    radii,
+    antiPatterns,
+    pageBreadcrumbs,
+  });
+
+  chrome.runtime.sendMessage({ type: "DESIGN_SYSTEM_SAVED", payload: { sessionId } });
 };
