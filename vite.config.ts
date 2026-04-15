@@ -49,4 +49,8 @@ export default defineConfig({
     outDir: "dist",
     emptyOutDir: true,
   },
+  test: {
+    // Exclude worktrees so vitest doesn't double-run tests from git worktrees
+    exclude: [".worktrees/**", "node_modules/**"],
+  },
 });
