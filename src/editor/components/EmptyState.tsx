@@ -24,7 +24,7 @@ export function EmptyState({ heading, description }: Props) {
       </svg>
       <div>
         <p className="font-semibold text-gray-700 dark:text-gray-300">{heading}</p>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-500">{description}</p>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{description}</p>
       </div>
     </div>
   );

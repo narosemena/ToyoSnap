@@ -7,4 +7,8 @@ export type ExtensionMessage =
   | { type: "RESUME_CAPTURE"; payload: { sessionId: string; captureMode: CaptureMode; captureCursor: boolean } }
   | { type: "END_CAPTURE" }
   | { type: "CAPTURE_STEP"; payload: { actionStep: ActionStep } }
-  | { type: "TRIGGER_CAPTURE_VISIBLE_TAB"; payload: { tabId: number } };
+  | { type: "TRIGGER_CAPTURE_VISIBLE_TAB"; payload: { tabId: number } }
+  | { type: "GET_TAB_ID" }
+  | { type: "RRWEB_BATCH"; payload: { sessionId: string; events: unknown[] } }
+  | { type: "EXPORT_SESSION_DATA"; payload: { sessionId: string } }
+  | { type: "DESIGN_SYSTEM_SAVED"; payload: { sessionId: string } };

@@ -1,85 +1,108 @@
-import { record } from "rrweb";
+/**
+ * Capture coordinator — dispatches to the correct engine by mode,
+ * mounts CursorTracker and StepLogBuilder for all captures.
+ */
 import type { CaptureMode } from "@/types/capture";
+import type { BaseCapture } from "@/capture/base-capture";
+import { RrwebCapture } from "@/capture/rrweb-capture";
+import { ImageCapture } from "@/capture/image-capture";
+import { VideoCapture } from "@/capture/video-capture";
+import { SvgCapture } from "@/capture/svg-capture";
+import { CursorTracker } from "@/capture/cursor-tracker";
+import { StepLogBuilder } from "@/action-logger/step-log-builder";
+import { extractDesignTokens } from "@/lib/design-extractor";
+import { detectAntiPatterns } from "@/lib/anti-pattern";
+import { getStepsBySession, putDesignSystem } from "@/storage/ephemeral-db";
 
-// State Management
-let stopFn: (() => void) | null = null;
-let eventBuffer: unknown[] = [];
-let flushIntervalId: ReturnType<typeof setInterval> | null = null;
+let engine: BaseCapture | null = null;
+let cursorTracker: CursorTracker | null = null;
+let stepLogger: StepLogBuilder | null = null;
 let activeSessionId: string | null = null;
 
-// Batching Constants
-const FLUSH_INTERVAL_MS = 5000; // Handoff to SW every 5 seconds
-const BATCH_SIZE_LIMIT = 500;   // Eager handoff if user acts quickly
+export const isCapturing = (): boolean => engine !== null;
 
-export const isCapturing = () => stopFn !== null;
-
-export const startCapture = async (sessionId: string, mode: CaptureMode, captureCursor: boolean) => {
+export const startCapture = async (
+  sessionId: string,
+  mode: CaptureMode,
+  captureCursor: boolean
+): Promise<void> => {
   if (isCapturing()) return;
 
+  // Pick the right capture engine
+  switch (mode) {
+    case "rrweb":
+      engine = new RrwebCapture(sessionId);
+      break;
+    case "image-chain":
+      engine = new ImageCapture(sessionId);
+      break;
+    case "video":
+      engine = new VideoCapture(sessionId);
+      break;
+    case "svg":
+      engine = new SvgCapture(sessionId);
+      break;
+    default:
+      engine = new RrwebCapture(sessionId);
+  }
+
   activeSessionId = sessionId;
-  eventBuffer = []; // Reset local buffer
 
-  // 1. The Observer: Initialize rrweb
-  stopFn = record({
-    emit(event) {
-      // 2. The Buffer: Push to local array instead of immediate send
-      eventBuffer.push(event);
+  // Cursor overlay (optional)
+  if (captureCursor) {
+    cursorTracker = new CursorTracker();
+    cursorTracker.start();
+  }
 
-      // Eager flush if we hit the limit early
-      if (eventBuffer.length >= BATCH_SIZE_LIMIT) {
-        flushBuffer();
-      }
-    },
-    // Security Gate: Mask passwords as validated by our Playwright test
-    maskInputOptions: {
-      password: true,
-    },
-    recordCanvas: mode === "rrweb",
-    // Only capture cursor if requested
-    slimDOMOptions: captureCursor ? {} : "all", 
-  });
+  // Action logger — mode-agnostic
+  stepLogger = new StepLogBuilder(sessionId);
+  stepLogger.start();
 
-  // 3. The Handoff: Throttle flushes to the Service Worker
-  flushIntervalId = setInterval(flushBuffer, FLUSH_INTERVAL_MS);
+  await engine.start();
 
-  // Expose events globally specifically for our password-masking.spec.ts to verify
-  (window as Record<string, unknown>).__toyosnap_rrweb_events = eventBuffer;
+  // Expose rrweb events for security tests
+  if (mode === "rrweb") {
+    (window as Record<string, unknown>).__toyosnap_rrweb_events = [];
+  }
 };
 
-export const stopCapture = async () => {
-  if (!isCapturing()) return;
+export const stopCapture = async (): Promise<void> => {
+  if (!engine || !activeSessionId) return;
 
-  if (stopFn) {
-    stopFn();
-    stopFn = null;
-  }
+  const sessionId = activeSessionId;
 
-  if (flushIntervalId) {
-    clearInterval(flushIntervalId);
-    flushIntervalId = null;
-  }
-
-  // Final flush to ensure no events are left behind
-  flushBuffer();
+  await engine.stop();
+  engine = null;
   activeSessionId = null;
-};
 
-const flushBuffer = () => {
-  if (eventBuffer.length === 0 || !activeSessionId) return;
+  stepLogger?.stop();
+  stepLogger = null;
 
-  // Clone buffer and clear original immediately to prevent race conditions
-  const batch = [...eventBuffer];
-  eventBuffer = []; 
+  cursorTracker?.stop();
+  cursorTracker = null;
 
-  chrome.runtime.sendMessage({
-    type: "RRWEB_BATCH",
-    payload: {
-      sessionId: activeSessionId,
-      events: batch
-    }
-  }).catch(() => {
-    // If SW is asleep, Chrome will wake it for the next message.
-    // In a strict Zero-Egress environment, we drop rather than fallback to unencrypted local storage.
-    console.warn("ToyoSnap: Dropped batch, Service Worker unavailable.");
+  // Extract design tokens and detect anti-patterns from live DOM
+  const elements = Array.from(document.querySelectorAll("*")).slice(0, 500);
+  const { colors, typography, shadows, radii } = extractDesignTokens(elements);
+  const steps = await getStepsBySession(sessionId);
+  const antiPatterns = detectAntiPatterns(elements, steps.length);
+  const pageBreadcrumbs = steps.map((s) => ({
+    stepIndex: s.stepIndex,
+    url: s.url,
+    pageTitle: s.pageTitle,
+    urlSlug: new URL(s.url).pathname.replace(/\//g, "-").replace(/^-/, "") || "root",
+  }));
+
+  await putDesignSystem({
+    sessionId,
+    capturedAt: Date.now(),
+    colors,
+    typography,
+    shadows,
+    radii,
+    antiPatterns,
+    pageBreadcrumbs,
   });
+
+  chrome.runtime.sendMessage({ type: "DESIGN_SYSTEM_SAVED", payload: { sessionId } });
 };

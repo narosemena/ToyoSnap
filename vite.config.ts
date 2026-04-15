@@ -34,6 +34,8 @@ export default defineConfig({
     webExtension({
       // Passing the imported manifest object directly
       manifest: () => manifest,
+      // Editor page is not a standard MV3 entry point — add it explicitly
+      additionalInputs: ["src/editor/editor.html"],
     }),
     escapeNonCharacters(),
   ],

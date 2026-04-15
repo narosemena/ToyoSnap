@@ -2,8 +2,9 @@ import React, { useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import { useEditorStore } from "./store/editor-store";
 import { usePIIStore } from "./store/pii-store";
-import { getAllSessions } from "@/storage/ephemeral-db";
+import { getAllSessions, getStepsBySession } from "@/storage/ephemeral-db";
 import { getAllGlobalLedgerEntries } from "@/storage/ephemeral-db";
+import type { CaptureStep } from "@/types/capture";
 import { LiveAnnouncer } from "./components/LiveAnnouncer";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { SkeletonStep } from "./components/SkeletonStep";
@@ -11,14 +12,29 @@ import { EmptyState } from "./components/EmptyState";
 import { PurgeMemoryButton } from "./components/PurgeMemoryButton";
 import { KeyboardShortcutsHint } from "./components/KeyboardShortcutsHint";
 import { ExportSensitivityWarning } from "./components/export/ExportSensitivityWarning";
+import { StepTimeline } from "./components/timeline/StepTimeline";
+import { StepViewer } from "./components/StepViewer";
+import { PIICanvas } from "./components/PIICanvas";
+import { ExportPanel } from "./components/export/ExportPanel";
+import { BulkImportDropzone } from "./components/BulkImportDropzone";
 import "../styles/globals.css";
 
+type RightPanelTab = "pii" | "export" | "import";
+
 function Editor() {
-  const { isHydrated, activeSessionId, setActiveSession, setHydrated, exportSensitivityAcknowledged } =
+  const { isHydrated, activeSessionId, activeStepIndex, setActiveSession, setHydrated, exportSensitivityAcknowledged } =
     useEditorStore();
   const { loadOperations } = usePIIStore();
   const [sessions, setSessions] = React.useState<Awaited<ReturnType<typeof getAllSessions>>>([]);
+  const [steps, setSteps] = React.useState<CaptureStep[]>([]);
   const [showExportWarning, setShowExportWarning] = React.useState(false);
+  const [rightTab, setRightTab] = React.useState<RightPanelTab>("pii");
+
+  // Load steps when active session changes
+  useEffect(() => {
+    if (!activeSessionId) { setSteps([]); return; }
+    void getStepsBySession(activeSessionId).then(setSteps);
+  }, [activeSessionId]);
 
   // Initialization — sequential per plan: editor-store first, then pii-store
   useEffect(() => {
@@ -126,23 +142,83 @@ function Editor() {
         </aside>
 
         {/* Main content */}
-        <main className="flex-1 overflow-auto p-6">
+        <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
           {!isHydrated ? (
-            <div className="space-y-3">
+            <div className="p-6 space-y-3">
               <SkeletonStep />
               <SkeletonStep />
               <SkeletonStep />
             </div>
           ) : !activeSessionId ? (
-            <EmptyState
-              heading="No session selected"
-              description="Select a session from the sidebar to view it."
-            />
+            <div className="flex-1 flex items-center justify-center">
+              <EmptyState
+                heading="No session selected"
+                description="Select a session from the sidebar to view it."
+              />
+            </div>
           ) : (
             <ErrorBoundary name="main-content">
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                Session: <code className="font-mono">{activeSessionId}</code>
-              </p>
+              {/* Timeline strip */}
+              <div className="border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+                <StepTimeline steps={steps} />
+              </div>
+
+              {/* Step viewer + right panel */}
+              <div className="flex flex-1 min-h-0 overflow-hidden">
+                {/* Center: step preview */}
+                <section className="flex-1 overflow-auto p-4 min-w-0">
+                  <StepViewer
+                    step={steps.find((s) => s.stepIndex === activeStepIndex) ?? steps[0] ?? null}
+                  />
+                </section>
+
+                {/* Right panel */}
+                <aside className="w-80 shrink-0 border-l border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden">
+                  {/* Tab bar */}
+                  <div
+                    className="flex border-b border-gray-200 dark:border-gray-700"
+                    role="tablist"
+                    aria-label="Editor panels"
+                  >
+                    {(["pii", "export", "import"] as RightPanelTab[]).map((tab) => (
+                      <button
+                        key={tab}
+                        role="tab"
+                        type="button"
+                        aria-selected={rightTab === tab}
+                        onClick={() => setRightTab(tab)}
+                        className={[
+                          "flex-1 py-2 text-xs font-medium capitalize transition-colors",
+                          "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-blue-500",
+                          rightTab === tab
+                            ? "border-b-2 border-blue-500 text-blue-600 dark:text-blue-400"
+                            : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200",
+                        ].join(" ")}
+                      >
+                        {tab === "pii" ? "Redact" : tab === "export" ? "Export" : "Import"}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Tab content */}
+                  <div className="flex-1 overflow-auto p-4">
+                    {rightTab === "pii" && (
+                      <PIICanvas
+                        step={steps.find((s) => s.stepIndex === activeStepIndex) ?? steps[0] ?? null}
+                      />
+                    )}
+                    {rightTab === "export" && <ExportPanel />}
+                    {rightTab === "import" && (
+                      <BulkImportDropzone
+                        sessionId={activeSessionId}
+                        onImported={() => {
+                          void getStepsBySession(activeSessionId).then(setSteps);
+                        }}
+                      />
+                    )}
+                  </div>
+                </aside>
+              </div>
             </ErrorBoundary>
           )}
         </main>

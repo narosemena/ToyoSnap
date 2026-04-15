@@ -22,6 +22,7 @@ export class RrwebCapture implements BaseCapture {
 
   async start(): Promise<void> {
     this.events = [];
+    (window as Record<string, unknown>).__toyosnap_rrweb_events = this.events;
 
     this.stopRecording = record({
       emit: (event) => {

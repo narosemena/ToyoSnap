@@ -7,8 +7,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export default defineConfig({
-  // Point directly to your security test suite
-  testDir: './security',
+  // Parent dir — individual suites are filtered via CLI path argument
+  testDir: './',
   
   /* Maximum time one test can run for. */
   timeout: 30 * 1000,

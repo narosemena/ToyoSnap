@@ -7,7 +7,8 @@ export default {
   name: "ToyoSnap",
   version: "0.1.0",
   description: "Zero-Egress WorkflowCapture Engine  -  browser extension for instructional designers",
-  permissions: ["storage", "activeTab", "scripting"],
+  permissions: ["storage", "activeTab", "scripting", "tabs"],
+  host_permissions: ["<all_urls>"],
   action: {
     default_popup: "src/popup/popup.html",
   },
@@ -27,7 +28,7 @@ export default {
   },
   web_accessible_resources: [
     {
-      resources: ["icons/*.png"],
+      resources: ["icons/*.png", "src/editor/editor.html"],
       matches: ["<all_urls>"],
     },
   ],
