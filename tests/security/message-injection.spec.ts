@@ -1,40 +1,35 @@
 /**
  * Security Gate: Message injection prevention.
- * Asserts the SW ignores START_CAPTURE sent from an untrusted page script context.
+ * Asserts the SW ignores START_CAPTURE sent from untrusted contexts.
  */
 import { test, expect } from "../fixtures/extension-fixture";
 
 test("service worker drops START_CAPTURE from untrusted page context", async ({
-  context,
-  extensionId,
+  page,
+  zeroEgress
 }) => {
-  void extensionId; // needed for fixture setup
-
-  const page = await context.newPage();
   await page.goto("about:blank");
 
-  // Attempt to send START_CAPTURE from page context (no extension id)
   const result = await page.evaluate(() => {
     return new Promise<string>((resolve) => {
       try {
-        // This will fail or be ignored because sender.id won't match chrome.runtime.id
+        // Attempting to spoof an internal message from a generic page
         chrome.runtime.sendMessage(
-          { type: "START_CAPTURE", payload: { mode: "rrweb", captureCursor: false } },
+          { type: "START_CAPTURE", payload: { mode: "rrweb" } },
           (response) => {
             if (chrome.runtime.lastError) {
-              resolve("error:" + chrome.runtime.lastError.message);
+              resolve("blocked");
             } else {
-              resolve("response:" + JSON.stringify(response));
+              resolve(JSON.stringify(response));
             }
           }
         );
       } catch (e) {
-        resolve("threw:" + String(e));
+        resolve("threw");
       }
     });
   });
 
-  // Either the message is dropped (no response / error) or the chrome API is unavailable
-  // The key assertion: no sessionId was returned (which would indicate capture started)
-  expect(result).not.toContain('"sessionId"');
+  // Verify no session was initiated by the unauthorized message
+  expect(result).not.toContain("sessionId");
 });
