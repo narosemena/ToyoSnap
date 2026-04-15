@@ -2,7 +2,7 @@
  * rrweb DOM recording capture mode.
  *
  * SECURITY INVARIANT (do not remove or make conditional):
- *   maskInputOptions.password: true â€” password fields must NEVER be recorded.
+ *   maskInputOptions.password: true  -  password fields must NEVER be recorded.
  *
  * Pinned to rrweb@1.1.3 stable. See package.json for upgrade path comment.
  */
@@ -22,13 +22,14 @@ export class RrwebCapture implements BaseCapture {
 
   async start(): Promise<void> {
     this.events = [];
+    (window as Record<string, unknown>).__toyosnap_rrweb_events = this.events;
 
     this.stopRecording = record({
       emit: (event) => {
         this.events.push(event);
       },
       maskInputOptions: {
-        password: true, // ALWAYS ON â€” non-negotiable security invariant
+        password: true, // ALWAYS ON  -  non-negotiable security invariant
         color: false,
         date: false,
       },
@@ -63,6 +64,6 @@ export class RrwebCapture implements BaseCapture {
   }
 
   async captureStep(_stepIndex: number): Promise<void> {
-    // rrweb records continuously â€” step captures are handled by action-logger
+    // rrweb records continuously  -  step captures are handled by action-logger
   }
 }
