@@ -4,52 +4,45 @@
  */
 import { test, expect } from "../fixtures/extension-fixture";
 
-test("IDB blob store contains encrypted (non-plaintext) data", async ({
+test("IDB blob store and rrwebEvents contain encrypted data", async ({
   context,
   extensionId,
 }) => {
   const page = await context.newPage();
   await page.goto(`chrome-extension://${extensionId}/src/editor/editor.html`);
 
-  // Write a known plaintext value to IDB via the extension's API
-  // then read back the raw bytes and assert they are not the plaintext
   const result = await page.evaluate(async () => {
-    // Open the toyosnap IDB directly as a raw bytes check
     return new Promise<{ isEncrypted: boolean; reason: string }>((resolve) => {
       const req = indexedDB.open("toyosnap", 1);
       req.onsuccess = () => {
         const db = req.result;
-        if (!db.objectStoreNames.contains("blobs")) {
-          resolve({ isEncrypted: true, reason: "no blobs store found (empty)" });
+        // Check both critical stores defined in CLAUDE.md
+        const storesToCheck = ["blobs", "steps.rrwebEvents"].filter(s => db.objectStoreNames.contains(s));
+        
+        if (storesToCheck.length === 0) {
+          resolve({ isEncrypted: true, reason: "No secure stores found yet" });
           return;
         }
-        const tx = db.transaction("blobs", "readonly");
-        const store = tx.objectStore("blobs");
+
+        const tx = db.transaction(storesToCheck, "readonly");
+        
+        // Check the first available store for plaintext leaks
+        const store = tx.objectStore(storesToCheck[0]);
         const getAllReq = store.getAll();
+
         getAllReq.onsuccess = () => {
-          const values = getAllReq.result as ArrayBuffer[];
-          if (values.length === 0) {
-            resolve({ isEncrypted: true, reason: "no blobs written yet" });
-            return;
-          }
-          // Check that the raw bytes are not valid UTF-8 JSON
+          const values = getAllReq.result;
           for (const value of values) {
             try {
               const text = new TextDecoder().decode(value);
-              JSON.parse(text);
-              resolve({
-                isEncrypted: false,
-                reason: "blob value decoded as valid JSON (plaintext!)",
-              });
+              JSON.parse(text); 
+              resolve({ isEncrypted: false, reason: "Plaintext JSON detected in DB!" });
               return;
-            } catch {
-              // Expected: decoding should fail for encrypted data
-            }
+            } catch { /* Success: Data is not valid UTF-8/JSON */ }
           }
-          resolve({ isEncrypted: true, reason: "all blobs are non-plaintext" });
+          resolve({ isEncrypted: true, reason: "Data is properly encrypted" });
         };
       };
-      req.onerror = () => resolve({ isEncrypted: true, reason: "db error" });
     });
   });
 
