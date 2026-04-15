@@ -28,7 +28,7 @@ export default {
   },
   web_accessible_resources: [
     {
-      resources: ["icons/*.png"],
+      resources: ["icons/*.png", "src/editor/editor.html"],
       matches: ["<all_urls>"],
     },
   ],
