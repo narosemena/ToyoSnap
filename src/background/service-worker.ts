@@ -16,9 +16,11 @@ import {
   putSession,
   getSession,
   countStepsBySession,
+  putStep,
+  getStepsBySession,
 } from "@/storage/ephemeral-db";
 import type { ExtensionMessage } from "@/types/messages";
-import type { CaptureSession, CaptureMode } from "@/types/capture";
+import type { CaptureSession, CaptureMode, CaptureStep } from "@/types/capture";
 
 // —— Initialization —————————————————————————————————————————————————————————
 
@@ -50,36 +52,6 @@ async function broadcastStateUpdate() {
   }).catch(() => {
     // Expected error if no UI listeners are active
   });
-}
-
-// —— Crypto Helpers —————————————————————————————————————————————————————————
-
-/**
- * Retrieves or creates a persistent Master Key for AES-GCM operations.
- */
-async function getMasterKey(): Promise<CryptoKey> {
-  const stored = await chrome.storage.local.get("vault_master_key");
-  
-  if (stored.vault_master_key) {
-    return await crypto.subtle.importKey(
-      "jwk",
-      stored.vault_master_key,
-      { name: "AES-GCM" },
-      true,
-      ["encrypt", "decrypt"]
-    );
-  }
-
-  const newKey = await crypto.subtle.generateKey(
-    { name: "AES-GCM", length: 256 },
-    true,
-    ["encrypt", "decrypt"]
-  );
-
-  const jwk = await crypto.subtle.exportKey("jwk", newKey);
-  await chrome.storage.local.set({ vault_master_key: jwk });
-  
-  return newKey;
 }
 
 // —— Message handler ————————————————————————————————————————————————————————
@@ -116,14 +88,45 @@ chrome.runtime.onMessage.addListener(
         void handleCaptureVisibleTab(sendResponse);
         return true;
 
-      case "RRWEB_BATCH":
-        void handleEncryptedStorage(msg.payload.events);
+      case "RRWEB_BATCH": {
+        const { sessionId, events } = msg.payload as { sessionId: string; events: unknown[] };
+        if (events?.length) {
+          void (async () => {
+            const stepIndex = (await countStepsBySession(sessionId)) + 1;
+            const step: CaptureStep = {
+              sessionId,
+              stepIndex,
+              timestamp: Date.now(),
+              url: "",
+              pageTitle: "",
+              blobId: null,
+              rrwebEvents: events as any,
+              actionStep: null,
+              spotlightSelector: null,
+            };
+            void putStep(step);
+          })();
+        }
         sendResponse({ ok: true });
         break;
+      }
 
-      case "EXPORT_SESSION_DATA":
-        void handleExportRequest(sendResponse);
+      case "EXPORT_SESSION_DATA": {
+        void (async () => {
+          const { sessionId } = msg.payload as { sessionId: string };
+          const steps = await getStepsBySession(sessionId);
+          sendResponse({ steps });
+        })();
         return true;
+      }
+
+      case "GET_TAB_ID": {
+        void (async () => {
+          const plane = await getSessionControlPlane();
+          sendResponse({ tabId: plane?.activeTabId ?? null });
+        })();
+        return true;
+      }
 
       default:
         if (process.env.NODE_ENV === "development") {
@@ -230,96 +233,6 @@ async function handleCaptureVisibleTab(
   }
 }
 
-/**
- * —— THE VAULT: ENCRYPTION & STORAGE ————————————————————————————————————————
- */
-async function handleEncryptedStorage(events: unknown[]) {
-  if (!events || events.length === 0) return;
-
-  const key = await getMasterKey();
-  const jsonString = JSON.stringify(events);
-  const data = new TextEncoder().encode(jsonString);
-
-  const iv = crypto.getRandomValues(new Uint8Array(12));
-  const cipherBuffer = await crypto.subtle.encrypt(
-    { name: "AES-GCM", iv },
-    key,
-    data
-  );
-
-  const combined = new Uint8Array(iv.length + cipherBuffer.byteLength);
-  combined.set(iv, 0);
-  combined.set(new Uint8Array(cipherBuffer), iv.length);
-
-  writeToIndexedDB(combined.buffer);
-}
-
-function writeToIndexedDB(buffer: ArrayBuffer) {
-  // BUMPED VERSION TO 2 to trigger onupgradeneeded
-  const req = indexedDB.open("toyosnap", 2);
-
-  req.onupgradeneeded = (event: IDBVersionChangeEvent) => {
-    const db = req.result;
-    // If the blobs store already exists, delete it so we can recreate it with autoIncrement
-    if (db.objectStoreNames.contains("blobs")) {
-      db.deleteObjectStore("blobs");
-    }
-    db.createObjectStore("blobs", { autoIncrement: true });
-    console.log("[ToyoSnap SW] IndexedDB schema updated to v2");
-  };
-
-  req.onsuccess = () => {
-    const db = req.result;
-    const tx = db.transaction("blobs", "readwrite");
-    const store = tx.objectStore("blobs");
-    store.add(buffer);
-  };
-
-  req.onerror = () => console.error("[ToyoSnap SW] IDB Write Error:", req.error);
-}
-
-/**
- * —— EXPORT ENGINE: DECRYPTION ——————————————————————————————————————————————
- */
-async function handleExportRequest(sendResponse: (r: any) => void) {
-  const key = await getMasterKey();
-  const req = indexedDB.open("toyosnap", 2);
-
-  req.onsuccess = async () => {
-    const db = req.result;
-    const tx = db.transaction("blobs", "readonly");
-    const store = tx.objectStore("blobs");
-    
-    const allBlobs = await new Promise<any[]>((resolve) => {
-      const getReq = store.getAll();
-      getReq.onsuccess = () => resolve(getReq.result);
-    });
-
-    const decryptedBatches = [];
-
-    for (const buffer of allBlobs) {
-      try {
-        const fullData = new Uint8Array(buffer);
-        const iv = fullData.slice(0, 12);
-        const ciphertext = fullData.slice(12);
-
-        const decrypted = await crypto.subtle.decrypt(
-          { name: "AES-GCM", iv },
-          key,
-          ciphertext
-        );
-
-        const json = new TextDecoder().decode(decrypted);
-        decryptedBatches.push(JSON.parse(json));
-      } catch (err) {
-        console.error("[ToyoSnap Vault] Decryption failed for batch:", err);
-      }
-    }
-
-    sendResponse({ events: decryptedBatches.flat() });
-  };
-}
-
 // —— Cross-domain SSO survival ——————————————————————————————————————————————
 
 chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
@@ -371,5 +284,4 @@ chrome.tabs.onRemoved.addListener((tabId) => {
 
 chrome.runtime.onInstalled.addListener(() => {
   clearBadge();
-  void getMasterKey();
 });
