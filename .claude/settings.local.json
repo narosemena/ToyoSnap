@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install *)",
+      "Bash(npm run *)",
+      "Bash(cat dist/src/popup/popup.html)",
+      "Bash(ls dist/src/)",
+      "Bash(python -c ' *)",
+      "Bash(python fix_mojibake.py)",
+      "mcp__plugin_claude-mem_mcp-search__get_observations",
+      "Bash(grep \"^export async function\" F:/ToyoSnap/ToyoSnap/.worktrees/toyosnap-completion/src/export-engine/*.ts)",
+      "Bash(ls F:/ToyoSnap/ToyoSnap/.eslint* F:/ToyoSnap/ToyoSnap/eslint.config*)",
+      "Bash(ls F:/ToyoSnap/ToyoSnap/.worktrees/toyosnap-completion/.eslint* F:/ToyoSnap/ToyoSnap/.worktrees/toyosnap-completion/eslint.config*)",
+      "Bash(python -c \"import json,sys; m=json.load\\(sys.stdin\\); print\\(json.dumps\\(m.get\\('action',{}\\), indent=2\\)\\); print\\('---'\\); print\\(json.dumps\\([p for p in m.get\\('web_accessible_resources',[]\\)], indent=2\\)\\)\")",
+      "Bash(node -e \"const p = require\\('./node_modules/vite-plugin-web-extension/package.json'\\); console.log\\(p.version\\)\")",
+      "Bash(npx vitest *)",
+      "Bash(node *)"
+    ]
+  }
+}

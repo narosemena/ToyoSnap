@@ -1,9 +1,4 @@
-import { describe, test, expect, vi, beforeEach } from "vitest";
-
-// template-parser.ts operates on the live DOM â€” set up a minimal mock
-const mockFields = [
-  { getAttribute: (attr: string) => attr === "data-rrweb-id" ? "field-1" : attr === "id" ? "username" : null, tagName: "INPUT", getAttribute_placeholder: "Enter username" },
-];
+import { describe, test, expect } from "vitest";
 
 // We test the sanitizeTemplateJSON integration separately
 // Here we test that PII values are stripped from the output
@@ -12,7 +7,7 @@ import { sanitizeTemplateJSON } from "../../src/security/json-guard";
 describe("template JSON safety", () => {
   test("PII values do not survive sanitization if keys are forbidden", () => {
     const rawTemplate = {
-      "field-1": "John Smith",  // safe key, PII value â€” OK for template placeholder
+      "field-1": "John Smith",  // safe key, PII value â€" OK for template placeholder
       "__proto__": "evil",
       "constructor": "bad",
     };

@@ -8,10 +8,6 @@ import { getStepsBySession } from "@/storage/ephemeral-db";
 import rrwebPlayerJs from "rrweb-player/dist/index.js?raw";
 import rrwebPlayerCss from "rrweb-player/dist/style.css?raw";
 
-function buildPageTransition(hostname: string): string {
-  return `<div class="toyosnap-page-transition">Navigated to: <strong>${hostname}</strong></div>`;
-}
-
 export async function exportHtmlReplay(sessionId: string): Promise<Blob> {
   const steps = await getStepsBySession(sessionId);
 

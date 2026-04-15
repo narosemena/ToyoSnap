@@ -22,7 +22,7 @@ test("template injection does not execute script tags", async ({ context }) => {
     node.setAttribute("data-rrweb-id", "test-node");
     document.body.appendChild(node);
 
-    const malicious = "<script>window.__xss_fired = true;<\/script>";
+    const malicious = "<script>window.__xss_fired = true;</script>";
     
     // Safely fallback to our pure-logic sanitizer since we are on about:blank
     const { sanitizeForTextContent } = (window as any).__toyosnap_sanitizer || { 

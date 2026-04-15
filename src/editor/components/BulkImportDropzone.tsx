@@ -1,5 +1,4 @@
 import React, { useCallback, useRef, useState } from "react";
-import { useEditorStore } from "@/editor/store/editor-store";
 import { putBlob, putStep } from "@/storage/ephemeral-db";
 
 interface BulkImportDropzoneProps {

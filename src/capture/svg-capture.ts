@@ -2,7 +2,7 @@
  * SVG DOM capture mode.
  * Converts the live DOM to SVG using dom-to-svg, then extracts 4 named layers.
  */
-import { documentToSVG, elementToSVG } from "dom-to-svg";
+import { documentToSVG } from "dom-to-svg";
 import type { BaseCapture } from "./base-capture";
 import { putStep, putBlob, countStepsBySession } from "@/storage/ephemeral-db";
 

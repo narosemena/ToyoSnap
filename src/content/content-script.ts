@@ -10,7 +10,7 @@ import type { ExtensionMessage } from "@/types/messages";
 import type { CaptureMode } from "@/types/capture";
 import { startCapture, stopCapture, isCapturing } from "./capture-coordinator";
 
-// â”€â”€ Push-resume: receive messages from SW â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// â"€â"€ Push-resume: receive messages from SW â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 
 chrome.runtime.onMessage.addListener(
   (rawMsg: unknown, _sender: chrome.runtime.MessageSender, sendResponse: (r: unknown) => void) => {
@@ -46,7 +46,7 @@ chrome.runtime.onMessage.addListener(
   }
 );
 
-// â”€â”€ Self-resume fallback: handles SW sleep on document_idle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// â"€â"€ Self-resume fallback: handles SW sleep on document_idle â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 
 void (async () => {
   if (isCapturing()) return; // push-resume already fired

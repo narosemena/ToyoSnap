@@ -25,7 +25,7 @@ test("no external network requests during capture and export", async ({
     }
   });
 
-  // Open the editor â€” no external requests should occur
+  // Open the editor â€" no external requests should occur
   const page = await context.newPage();
   await page.goto(`chrome-extension://${extensionId}/src/editor/editor.html`);
   await page.waitForLoadState("networkidle");

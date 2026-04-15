@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useState } from "react";
 import type { CaptureStep } from "@/types/capture";
 import type { LedgerEntry } from "@/types/ledger";
 import { useEditorStore } from "@/editor/store/editor-store";
@@ -50,7 +50,7 @@ function RegionButton({
 }
 
 function ToolToggle({
-  tool,
+  tool: _tool,
   label,
   active,
   onToggle,
