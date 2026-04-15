@@ -1,7 +1,7 @@
 /**
- * Content script â€” injected at document_idle into every page.
+ * Content script  -  injected at document_idle into every page.
  *
- * Two resume paths (idempotent â€” whichever fires first wins):
+ * Two resume paths (idempotent  -  whichever fires first wins):
  *  1. Push-resume: SW sends RESUME_CAPTURE via chrome.runtime.onMessage
  *  2. Self-resume fallback: proactively checks chrome.storage.session on
  *     document_idle in case the SW was sleeping and missed the tab update

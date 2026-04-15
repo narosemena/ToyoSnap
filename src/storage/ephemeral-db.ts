@@ -1,7 +1,7 @@
 /**
  * CRUD layer for IDB. All blob and rrweb event writes/reads go through
  * idb-crypto.ts transparently. No other module calls idb directly for
- * the "blobs" or rrweb event data â€” they all use this module.
+ * the "blobs" or rrweb event data  -  they all use this module.
  */
 import { getDB } from "@/lib/idb";
 import { getOrCreateSessionKey, encrypt, decrypt } from "@/security/idb-crypto";
