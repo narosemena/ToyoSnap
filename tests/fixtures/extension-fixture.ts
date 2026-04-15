@@ -12,7 +12,8 @@ export type ExtensionFixtures = {
 };
 
 export const test = base.extend<ExtensionFixtures>({
-  context: async (_, use) => {
+  // eslint-disable-next-line no-empty-pattern
+  context: async ({}, use) => {
     const extensionPath = path.resolve(__dirname, "../../dist");
     const context = await chromium.launchPersistentContext("", {
       // Manifest V3 extensions require headed mode (headless: false).
