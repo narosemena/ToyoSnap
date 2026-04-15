@@ -1,0 +1,30 @@
+@import "tailwindcss";
+
+/* Base typography */
+@layer base {
+  html {
+    font-family: system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Screen-reader only utility */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+  }
+}
+
+/* Page-transition markers inserted by the HTML replay exporter */
+.toyosnap-page-transition {
+  @apply w-full py-2 px-4 my-4 text-sm font-medium text-center;
+  @apply bg-amber-50 border border-amber-200 rounded;
+  @apply dark:bg-amber-900/20 dark:border-amber-700 dark:text-amber-200;
+}

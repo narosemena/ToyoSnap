@@ -1,0 +1,36 @@
+import type { eventWithTime } from "rrweb";
+
+export type CaptureMode = "video" | "image-chain" | "rrweb" | "svg";
+
+export interface ActionStep {
+  stepIndex: number;
+  timestamp: number;
+  targetSelector: string;
+  targetRrwebId: string | null;
+  label: string;
+  role: string;
+  coordinates: { x: number; y: number };
+  generatedText: string;
+}
+
+export interface CaptureSession {
+  id: string;
+  mode: CaptureMode;
+  startedAt: number;
+  endedAt: number | null;
+  stepCount: number;
+  captureCursor: boolean;
+  hostnames: string[];
+}
+
+export interface CaptureStep {
+  sessionId: string;
+  stepIndex: number;
+  timestamp: number;
+  url: string;
+  pageTitle: string;
+  blobId: string | null;
+  rrwebEvents: eventWithTime[] | null;
+  actionStep: ActionStep | null;
+  spotlightSelector: string | null;
+}
