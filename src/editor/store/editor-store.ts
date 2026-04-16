@@ -9,7 +9,7 @@ interface EditorStore {
   previewMode: CaptureMode;
   isHydrated: boolean;
   exportSensitivityAcknowledged: boolean;
-  setActiveSession: (id: string) => void;
+  setActiveSession: (id: string | null) => void;
   setActiveStep: (index: number) => void;
   setActiveTool: (tool: "blur" | "redact" | null) => void;
   setPreviewMode: (mode: CaptureMode) => void;
@@ -32,6 +32,7 @@ export const useEditorStore = create<EditorStore>()(
         state.activeStepIndex = 0;
         state.exportSensitivityAcknowledged = false;
       }),
+
     setActiveStep: (index) =>
       set((state) => {
         state.activeStepIndex = index;

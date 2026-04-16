@@ -30,6 +30,8 @@ export interface CaptureStep {
   url: string;
   pageTitle: string;
   blobId: string | null;
+  /** "image/png" | "image/svg+xml" | "video/webm" — null for rrweb steps */
+  mimeType?: string | null;
   rrwebEvents: eventWithTime[] | null;
   actionStep: ActionStep | null;
   spotlightSelector: string | null;

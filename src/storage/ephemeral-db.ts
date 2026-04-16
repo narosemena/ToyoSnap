@@ -31,6 +31,21 @@ export async function deleteSession(id: string): Promise<void> {
   await db.delete("sessions", id);
 }
 
+/** Delete a session and all associated steps, blobs, and design system data. */
+export async function purgeSession(sessionId: string): Promise<void> {
+  const db = await getDB();
+  const steps = await getStepsBySession(sessionId);
+
+  for (const step of steps) {
+    if (step.blobId) await db.delete("blobs", step.blobId);
+    await db.delete("blobs", `rrweb-${sessionId}-${step.stepIndex}`);
+    await db.delete("steps", [sessionId, step.stepIndex]);
+  }
+
+  await db.delete("designSystems", sessionId);
+  await db.delete("sessions", sessionId);
+}
+
 // â"€â"€ Steps â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 
 export async function putStep(step: CaptureStep): Promise<void> {

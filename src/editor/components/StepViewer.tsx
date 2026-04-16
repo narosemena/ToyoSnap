@@ -195,14 +195,14 @@ function RrwebViewer({ step }: { step: CaptureStep }) {
 // Unlike DOM mode, these cannot be applied globally across steps because each
 // step has a different visual layout.
 
-function ImageViewer({ blobId, step }: { blobId: string; step: CaptureStep }) {
+function ImageViewer({ blobId, mimeType, step }: { blobId: string; mimeType: string; step: CaptureStep }) {
   const [buffer, setBuffer] = useState<ArrayBuffer | null>(null);
   const [loading, setLoading] = useState(true);
   const imgRef = useRef<HTMLImageElement>(null);
   const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
   const [dragCurrent, setDragCurrent] = useState<{ x: number; y: number } | null>(null);
 
-  const url = useObjectUrl(buffer, "image/png");
+  const url = useObjectUrl(buffer, mimeType);
   const activeTool = useEditorStore((s) => s.activeTool);
   const { activeSessionId, activeStepIndex } = useEditorStore();
   const { applyOperation, appliedOperations } = usePIIStore();
@@ -430,7 +430,10 @@ export function StepViewer({ step }: StepViewerProps) {
 
   const hasRrweb = Boolean(fullStep.rrwebEvents?.length);
   const hasBlob = Boolean(fullStep.blobId);
-  const isVideo = hasBlob && !hasRrweb && !fullStep.actionStep;
+  // Use explicit mimeType when available; fall back to legacy heuristic for
+  // steps recorded before mimeType was added to the schema.
+  const isVideo = hasBlob && !hasRrweb &&
+    (fullStep.mimeType ? fullStep.mimeType === "video/webm" : !fullStep.actionStep);
 
   return (
     <section
@@ -452,7 +455,11 @@ export function StepViewer({ step }: StepViewerProps) {
         {!hasRrweb && hasBlob && fullStep.blobId && (
           isVideo
             ? <VideoViewer blobId={fullStep.blobId} />
-            : <ImageViewer blobId={fullStep.blobId} step={fullStep} />
+            : <ImageViewer
+                blobId={fullStep.blobId}
+                mimeType={fullStep.mimeType ?? "image/png"}
+                step={fullStep}
+              />
         )}
         {!hasRrweb && !hasBlob && (
           <div className="flex items-center justify-center h-48 text-sm text-gray-500 dark:text-gray-400">

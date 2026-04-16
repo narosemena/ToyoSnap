@@ -2,9 +2,9 @@ import React, { useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import { useEditorStore } from "./store/editor-store";
 import { usePIIStore } from "./store/pii-store";
-import { getAllSessions, getStepsBySession } from "@/storage/ephemeral-db";
+import { getAllSessions, getStepsBySession, purgeSession } from "@/storage/ephemeral-db";
 import { getAllGlobalLedgerEntries } from "@/storage/ephemeral-db";
-import type { CaptureStep } from "@/types/capture";
+import type { CaptureSession, CaptureStep } from "@/types/capture";
 import { LiveAnnouncer } from "./components/LiveAnnouncer";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { SkeletonStep } from "./components/SkeletonStep";
@@ -26,10 +26,12 @@ function Editor() {
   const { isHydrated, activeSessionId, activeStepIndex, setActiveSession, setHydrated, exportSensitivityAcknowledged } =
     useEditorStore();
   const { loadOperations } = usePIIStore();
-  const [sessions, setSessions] = React.useState<Awaited<ReturnType<typeof getAllSessions>>>([]);
+  const [sessions, setSessions] = React.useState<CaptureSession[]>([]);
   const [steps, setSteps] = React.useState<CaptureStep[]>([]);
   const [showExportWarning, setShowExportWarning] = React.useState(false);
   const [rightTab, setRightTab] = React.useState<RightPanelTab>("pii");
+  const [checkedIds, setCheckedIds] = React.useState<Set<string>>(new Set());
+  const [openMenuId, setOpenMenuId] = React.useState<string | null>(null);
 
   // Load steps when active session changes
   useEffect(() => {
@@ -83,6 +85,43 @@ function Editor() {
     return () => document.removeEventListener("keydown", onKey);
   }, []);
 
+  // Close 3-dot menu when clicking outside
+  useEffect(() => {
+    if (!openMenuId) return;
+    const close = () => setOpenMenuId(null);
+    document.addEventListener("click", close);
+    return () => document.removeEventListener("click", close);
+  }, [openMenuId]);
+
+  async function deleteOne(sessionId: string) {
+    await purgeSession(sessionId);
+    const remaining = sessions.filter((s) => s.id !== sessionId);
+    setSessions(remaining);
+    setCheckedIds((prev) => { const n = new Set(prev); n.delete(sessionId); return n; });
+    setOpenMenuId(null);
+    if (activeSessionId === sessionId) {
+      setActiveSession(remaining[remaining.length - 1]?.id ?? null);
+    }
+  }
+
+  async function deleteSelected() {
+    for (const id of checkedIds) await purgeSession(id);
+    const remaining = sessions.filter((s) => !checkedIds.has(s.id));
+    setSessions(remaining);
+    setCheckedIds(new Set());
+    if (activeSessionId && checkedIds.has(activeSessionId)) {
+      setActiveSession(remaining[remaining.length - 1]?.id ?? null);
+    }
+  }
+
+  function toggleCheck(id: string) {
+    setCheckedIds((prev) => {
+      const n = new Set(prev);
+      n.has(id) ? n.delete(id) : n.add(id);
+      return n;
+    });
+  }
+
   return (
     <>
       <LiveAnnouncer />
@@ -103,7 +142,7 @@ function Editor() {
           </div>
 
           {/* Session list */}
-          <nav aria-label="Sessions">
+          <nav aria-label="Sessions" className="flex-1 min-h-0 overflow-y-auto">
             {!isHydrated ? (
               <div className="space-y-2">
                 <SkeletonStep />
@@ -116,24 +155,100 @@ function Editor() {
                 description="Start a recording from the extension popup."
               />
             ) : (
-              <ul className="space-y-1">
-                {sessions.map((s) => (
-                  <li key={s.id}>
+              <>
+                {/* Bulk-delete toolbar */}
+                {checkedIds.size > 0 && (
+                  <div className="flex items-center gap-1 mb-2">
                     <button
                       type="button"
-                      onClick={() => setActiveSession(s.id)}
-                      className={[
-                        "w-full text-left px-2 py-1.5 rounded text-xs truncate",
-                        activeSessionId === s.id
-                          ? "bg-blue-600 text-white"
-                          : "hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300",
-                      ].join(" ")}
+                      onClick={() => void deleteSelected()}
+                      className="flex-1 text-xs text-red-600 dark:text-red-400 border border-red-300 dark:border-red-700 rounded px-2 py-1 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                     >
-                      {s.mode} — {new Date(s.startedAt).toLocaleString()}
+                      Delete {checkedIds.size}
                     </button>
-                  </li>
-                ))}
-              </ul>
+                    <button
+                      type="button"
+                      onClick={() => setCheckedIds(new Set())}
+                      className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 px-1"
+                      aria-label="Clear selection"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                )}
+
+                <ul className="space-y-0.5">
+                  {sessions.map((s) => (
+                    <li key={s.id} className="group flex items-center gap-1">
+                      {/* Checkbox */}
+                      <input
+                        type="checkbox"
+                        checked={checkedIds.has(s.id)}
+                        onChange={() => toggleCheck(s.id)}
+                        className="shrink-0 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                        aria-label={`Select session ${new Date(s.startedAt).toLocaleString()}`}
+                      />
+
+                      {/* Session button */}
+                      <button
+                        type="button"
+                        onClick={() => setActiveSession(s.id)}
+                        className={[
+                          "flex-1 min-w-0 text-left px-2 py-1.5 rounded text-xs truncate transition-colors",
+                          activeSessionId === s.id
+                            ? "bg-blue-600 text-white"
+                            : "hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300",
+                        ].join(" ")}
+                      >
+                        <span className="block truncate font-medium capitalize">{s.mode}</span>
+                        <span className={[
+                          "block truncate",
+                          activeSessionId === s.id ? "text-blue-200" : "text-gray-400 dark:text-gray-500",
+                        ].join(" ")}>
+                          {new Date(s.startedAt).toLocaleString()}
+                        </span>
+                      </button>
+
+                      {/* 3-dot menu */}
+                      <div className="relative shrink-0">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setOpenMenuId(openMenuId === s.id ? null : s.id);
+                          }}
+                          className="p-1 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
+                          aria-label="Session options"
+                          aria-haspopup="menu"
+                          aria-expanded={openMenuId === s.id}
+                        >
+                          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                            <circle cx="8" cy="3" r="1.5" />
+                            <circle cx="8" cy="8" r="1.5" />
+                            <circle cx="8" cy="13" r="1.5" />
+                          </svg>
+                        </button>
+                        {openMenuId === s.id && (
+                          <div
+                            role="menu"
+                            className="absolute right-0 top-full mt-1 z-30 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg py-1 min-w-[110px]"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <button
+                              role="menuitem"
+                              type="button"
+                              onClick={() => void deleteOne(s.id)}
+                              className="w-full text-left px-3 py-1.5 text-xs text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </>
             )}
           </nav>
 

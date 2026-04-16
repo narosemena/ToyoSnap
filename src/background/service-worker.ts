@@ -135,7 +135,8 @@ chrome.runtime.onMessage.addListener(
             const stepIndex = (await countStepsBySession(sessionId)) + 1;
             const step: CaptureStep = {
               sessionId, stepIndex, timestamp: Date.now(),
-              url, pageTitle, blobId, rrwebEvents: null, actionStep: null, spotlightSelector: null,
+              url, pageTitle, blobId, mimeType: "image/png",
+              rrwebEvents: null, actionStep: null, spotlightSelector: null,
             };
             await putStep(step);
             sendResponse({ ok: true });
@@ -150,7 +151,7 @@ chrome.runtime.onMessage.addListener(
         // SVG and video captures generate binary in the content script context.
         // Transfer via base64 and store in extension-origin IDB here in the SW.
         void (async () => {
-          const { sessionId, url, pageTitle, base64 } = msg.payload as {
+          const { sessionId, url, pageTitle, base64, mimeType: payloadMime } = msg.payload as {
             sessionId: string; url: string; pageTitle: string; base64: string; mimeType: string;
           };
           try {
@@ -163,7 +164,8 @@ chrome.runtime.onMessage.addListener(
             const stepIndex = (await countStepsBySession(sessionId)) + 1;
             const step: CaptureStep = {
               sessionId, stepIndex, timestamp: Date.now(),
-              url, pageTitle, blobId, rrwebEvents: null, actionStep: null, spotlightSelector: null,
+              url, pageTitle, blobId, mimeType: payloadMime,
+              rrwebEvents: null, actionStep: null, spotlightSelector: null,
             };
             await putStep(step);
             sendResponse({ ok: true });

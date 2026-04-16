@@ -54,16 +54,15 @@ export const startCapture = async (
     cursorTracker.start();
   }
 
-  // Action logger — mode-agnostic
-  stepLogger = new StepLogBuilder(sessionId);
-  stepLogger.start();
+  // Action logger tracks click targets for image-chain/video/svg modes.
+  // Not used for rrweb mode — screenshots carry their own metadata and the
+  // logger would race with the screenshot handler to write the same stepIndex.
+  if (mode !== "rrweb") {
+    stepLogger = new StepLogBuilder(sessionId);
+    stepLogger.start();
+  }
 
   await engine.start();
-
-  // Expose rrweb events for security tests
-  if (mode === "rrweb") {
-    (window as unknown as Record<string, unknown>).__toyosnap_rrweb_events = [];
-  }
 };
 
 export const stopCapture = async (): Promise<void> => {
