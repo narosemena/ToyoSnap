@@ -30,6 +30,9 @@ jobs:
       - name: Lint (ESLint + eslint-plugin-security)
         run: npm run lint
 
+      - name: Install semgrep
+        run: pip install semgrep
+
       - name: SAST (semgrep OWASP scan)
         run: npm run lint:sast
 
