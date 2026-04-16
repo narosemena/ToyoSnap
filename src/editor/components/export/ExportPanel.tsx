@@ -1,35 +1,53 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useEditorStore } from "@/editor/store/editor-store";
 import { ExportSensitivityWarning } from "./ExportSensitivityWarning";
-import { exportDocx } from "@/export-engine/docx-exporter";
 import { exportPptx } from "@/export-engine/pptx-exporter";
 import { exportPngZip } from "@/export-engine/png-zip-exporter";
-import { exportHtmlReplay } from "@/export-engine/html-replay-exporter";
+import { exportBmpZip } from "@/export-engine/bmp-zip-exporter";
 import { exportSvgZip } from "@/export-engine/svg-zip-exporter";
-import { exportMarkdown } from "@/export-engine/md-exporter";
-import { exportVideo } from "@/export-engine/video-exporter";
-import { exportActionLog } from "@/export-engine/action-log-exporter";
-import { exportMCP } from "@/export-engine/mcp-exporter";
+import { getSession } from "@/storage/ephemeral-db";
+import type { CaptureMode } from "@/types/capture";
 
 interface ExportFormat {
   id: string;
   label: string;
   description: string;
   ext: string;
-  mimeType: string;
   run: (sessionId: string) => Promise<Blob>;
+  /** If set, only show when session mode matches */
+  onlyForMode?: CaptureMode;
 }
 
 const FORMATS: ExportFormat[] = [
-  { id: "docx",    label: "Word Document",    description: "Annotated steps with screenshots",     ext: "docx",  mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", run: exportDocx },
-  { id: "pptx",    label: "PowerPoint",       description: "One slide per step",                   ext: "pptx",  mimeType: "application/vnd.openxmlformats-officedocument.presentationml.presentation", run: exportPptx },
-  { id: "html",    label: "HTML Replay",      description: "Self-contained rrweb playback file",   ext: "html",  mimeType: "text/html",                   run: exportHtmlReplay },
-  { id: "png",     label: "PNG Screenshots",  description: "ZIP archive of step images",           ext: "zip",   mimeType: "application/zip",             run: exportPngZip },
-  { id: "svg",     label: "SVG Layers",       description: "ZIP of layered SVG files per step",    ext: "zip",   mimeType: "application/zip",             run: exportSvgZip },
-  { id: "md",      label: "Markdown",         description: "Step-by-step markdown document",       ext: "md",    mimeType: "text/markdown",               run: exportMarkdown },
-  { id: "video",   label: "Video",            description: "WebM screen recording",                ext: "webm",  mimeType: "video/webm",                  run: exportVideo },
-  { id: "log",     label: "Action Log",       description: "JSON log of all captured interactions",ext: "json",  mimeType: "application/json",            run: exportActionLog },
-  { id: "mcp",     label: "MCP Package",      description: "Machine-consumable workflow package",  ext: "json",  mimeType: "application/json",            run: exportMCP },
+  {
+    id: "png",
+    label: "PNG Screenshots",
+    description: "ZIP of step images with PII overlays baked in",
+    ext: "zip",
+    run: exportPngZip,
+  },
+  {
+    id: "bmp",
+    label: "BMP Screenshots",
+    description: "ZIP of 24-bit BMP images with PII overlays baked in",
+    ext: "zip",
+    run: exportBmpZip,
+  },
+  {
+    id: "pptx",
+    label: "PowerPoint",
+    description: "One slide per step with PII overlays baked in",
+    ext: "pptx",
+    run: exportPptx,
+  },
+  {
+    id: "svg",
+    label: "SVG Layers",
+    description: "ZIP of layered SVG files with PII overlays injected",
+    ext: "zip",
+    run: exportSvgZip,
+    onlyForMode: "svg",
+  },
 ];
 
 function downloadBlob(blob: Blob, filename: string) {
@@ -46,6 +64,12 @@ export function ExportPanel() {
   const [pendingFormat, setPendingFormat] = useState<ExportFormat | null>(null);
   const [exportingId, setExportingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [sessionMode, setSessionMode] = useState<CaptureMode | null>(null);
+
+  useEffect(() => {
+    if (!activeSessionId) { setSessionMode(null); return; }
+    void getSession(activeSessionId).then((s) => setSessionMode(s?.mode ?? null));
+  }, [activeSessionId]);
 
   if (!activeSessionId) {
     return (
@@ -54,6 +78,10 @@ export function ExportPanel() {
       </div>
     );
   }
+
+  const visibleFormats = FORMATS.filter(
+    (fmt) => !fmt.onlyForMode || fmt.onlyForMode === sessionMode
+  );
 
   async function runExport(format: ExportFormat) {
     if (!activeSessionId) return;
@@ -97,8 +125,8 @@ export function ExportPanel() {
         </p>
       )}
 
-      <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-        {FORMATS.map((fmt) => {
+      <ul className="grid grid-cols-1 gap-2">
+        {visibleFormats.map((fmt) => {
           const busy = exportingId === fmt.id;
           return (
             <li key={fmt.id}>
@@ -137,6 +165,10 @@ export function ExportPanel() {
           );
         })}
       </ul>
+
+      <p className="mt-4 text-xs text-gray-400 dark:text-gray-500">
+        All exports are generated locally — no data leaves your device.
+      </p>
     </section>
   );
 }

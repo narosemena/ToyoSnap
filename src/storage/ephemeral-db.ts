@@ -152,8 +152,8 @@ export async function putLocalLedgerEntry(
   entry: LedgerEntry
 ): Promise<void> {
   const db = await getDB();
-  const rrwebId = entry.rrwebId ?? entry.elementSelector;
-  // Local ledger key is [sessionId, stepId, rrwebId]
+  // Region ops have no selector/rrwebId — use entry.id to prevent overwrite.
+  const rrwebId = entry.rrwebId ?? (entry.elementSelector || entry.id);
   const storedEntry = { ...entry, sessionId, stepId, rrwebId };
   await db.put("localLedger", storedEntry as unknown as LedgerEntry);
 }
@@ -165,6 +165,15 @@ export async function getLocalLedgerEntry(
 ): Promise<LedgerEntry | undefined> {
   const db = await getDB();
   return db.get("localLedger", [sessionId, stepId, rrwebId]);
+}
+
+/** Returns all local ledger entries for a given session (any step). */
+export async function getLocalLedgerEntriesBySession(sessionId: string): Promise<LedgerEntry[]> {
+  const db = await getDB();
+  return db.getAll(
+    "localLedger",
+    IDBKeyRange.bound([sessionId], [sessionId, "\uffff", "\uffff"])
+  ) as unknown as LedgerEntry[];
 }
 
 // â"€â"€ Design Systems â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
