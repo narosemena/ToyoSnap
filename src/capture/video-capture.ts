@@ -1,5 +1,4 @@
 import type { BaseCapture } from "./base-capture";
-import { putStep, putBlob, countStepsBySession } from "@/storage/ephemeral-db";
 
 export class VideoCapture implements BaseCapture {
   private sessionId: string;
@@ -39,20 +38,24 @@ export class VideoCapture implements BaseCapture {
 
     const blob = new Blob(this.chunks, { type: "video/webm" });
     const buffer = await blob.arrayBuffer();
-    const blobId = crypto.randomUUID();
-    await putBlob(blobId, buffer);
+    const bytes = new Uint8Array(buffer);
+    // btoa can't handle large arrays in one call — chunk it
+    let binary = "";
+    const chunkSize = 8192;
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+      binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+    }
+    const base64 = btoa(binary);
 
-    const stepIndex = (await countStepsBySession(this.sessionId)) + 1;
-    await putStep({
-      sessionId: this.sessionId,
-      stepIndex,
-      timestamp: Date.now(),
-      url: location.href,
-      pageTitle: document.title,
-      blobId,
-      rrwebEvents: null,
-      actionStep: null,
-      spotlightSelector: null,
+    await chrome.runtime.sendMessage({
+      type: "STORE_BLOB_STEP",
+      payload: {
+        sessionId: this.sessionId,
+        url: location.href,
+        pageTitle: document.title,
+        base64,
+        mimeType: "video/webm",
+      },
     });
   }
 

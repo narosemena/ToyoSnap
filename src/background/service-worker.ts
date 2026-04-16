@@ -17,6 +17,7 @@ import {
   getSession,
   countStepsBySession,
   putStep,
+  putBlob,
   getStepsBySession,
 } from "@/storage/ephemeral-db";
 import type { ExtensionMessage } from "@/types/messages";
@@ -89,7 +90,12 @@ chrome.runtime.onMessage.addListener(
         return true;
 
       case "RRWEB_BATCH": {
-        const { sessionId, events } = msg.payload as { sessionId: string; events: unknown[] };
+        const { sessionId, events, url, pageTitle } = msg.payload as {
+          sessionId: string;
+          events: unknown[];
+          url?: string;
+          pageTitle?: string;
+        };
         if (events?.length) {
           void (async () => {
             const stepIndex = (await countStepsBySession(sessionId)) + 1;
@@ -97,18 +103,73 @@ chrome.runtime.onMessage.addListener(
               sessionId,
               stepIndex,
               timestamp: Date.now(),
-              url: "",
-              pageTitle: "",
+              url: url ?? "",
+              pageTitle: pageTitle ?? "",
               blobId: null,
-              rrwebEvents: events as any,
+              rrwebEvents: events as CaptureStep["rrwebEvents"],
               actionStep: null,
               spotlightSelector: null,
             };
-            void putStep(step);
+            await putStep(step);
           })();
         }
         sendResponse({ ok: true });
         break;
+      }
+
+      case "CAPTURE_IMAGE_STEP": {
+        // Content scripts cannot write to the extension-origin IDB.
+        // SW captures the screenshot and stores blob + step directly.
+        void (async () => {
+          const { sessionId, url, pageTitle } = msg.payload as {
+            sessionId: string; url: string; pageTitle: string;
+          };
+          try {
+            const dataUrl = await chrome.tabs.captureVisibleTab({ format: "png" });
+            const response = await fetch(dataUrl);
+            const buffer = await response.arrayBuffer();
+            const blobId = crypto.randomUUID();
+            await putBlob(blobId, buffer);
+            const stepIndex = (await countStepsBySession(sessionId)) + 1;
+            const step: CaptureStep = {
+              sessionId, stepIndex, timestamp: Date.now(),
+              url, pageTitle, blobId, rrwebEvents: null, actionStep: null, spotlightSelector: null,
+            };
+            await putStep(step);
+            sendResponse({ ok: true });
+          } catch (err) {
+            sendResponse({ error: String(err) });
+          }
+        })();
+        return true;
+      }
+
+      case "STORE_BLOB_STEP": {
+        // SVG and video captures generate binary in the content script context.
+        // Transfer via base64 and store in extension-origin IDB here in the SW.
+        void (async () => {
+          const { sessionId, url, pageTitle, base64 } = msg.payload as {
+            sessionId: string; url: string; pageTitle: string; base64: string; mimeType: string;
+          };
+          try {
+            const binary = atob(base64);
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+            const buffer = bytes.buffer;
+            const blobId = crypto.randomUUID();
+            await putBlob(blobId, buffer);
+            const stepIndex = (await countStepsBySession(sessionId)) + 1;
+            const step: CaptureStep = {
+              sessionId, stepIndex, timestamp: Date.now(),
+              url, pageTitle, blobId, rrwebEvents: null, actionStep: null, spotlightSelector: null,
+            };
+            await putStep(step);
+            sendResponse({ ok: true });
+          } catch (err) {
+            sendResponse({ error: String(err) });
+          }
+        })();
+        return true;
       }
 
       case "EXPORT_SESSION_DATA": {

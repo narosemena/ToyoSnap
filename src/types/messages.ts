@@ -9,6 +9,8 @@ export type ExtensionMessage =
   | { type: "CAPTURE_STEP"; payload: { actionStep: ActionStep } }
   | { type: "TRIGGER_CAPTURE_VISIBLE_TAB"; payload: { tabId: number } }
   | { type: "GET_TAB_ID" }
-  | { type: "RRWEB_BATCH"; payload: { sessionId: string; events: unknown[] } }
+  | { type: "RRWEB_BATCH"; payload: { sessionId: string; events: unknown[]; url?: string; pageTitle?: string } }
+  | { type: "CAPTURE_IMAGE_STEP"; payload: { sessionId: string; url: string; pageTitle: string } }
+  | { type: "STORE_BLOB_STEP"; payload: { sessionId: string; url: string; pageTitle: string; base64: string; mimeType: string } }
   | { type: "EXPORT_SESSION_DATA"; payload: { sessionId: string } }
   | { type: "DESIGN_SYSTEM_SAVED"; payload: { sessionId: string } };

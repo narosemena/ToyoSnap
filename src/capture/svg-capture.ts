@@ -4,7 +4,6 @@
  */
 import { documentToSVG } from "dom-to-svg";
 import type { BaseCapture } from "./base-capture";
-import { putStep, putBlob, countStepsBySession } from "@/storage/ephemeral-db";
 
 export class SvgCapture implements BaseCapture {
   private sessionId: string;
@@ -34,22 +33,18 @@ export class SvgCapture implements BaseCapture {
     await this.addLayers(svgElement);
 
     const serialized = new XMLSerializer().serializeToString(svgDocument);
-    const buffer = new TextEncoder().encode(serialized).buffer;
+    const bytes = new TextEncoder().encode(serialized);
+    const base64 = btoa(String.fromCharCode(...bytes));
 
-    const blobId = crypto.randomUUID();
-    await putBlob(blobId, buffer);
-
-    const stepIndex = (await countStepsBySession(this.sessionId)) + 1;
-    await putStep({
-      sessionId: this.sessionId,
-      stepIndex,
-      timestamp: Date.now(),
-      url: location.href,
-      pageTitle: document.title,
-      blobId,
-      rrwebEvents: null,
-      actionStep: null,
-      spotlightSelector: null,
+    await chrome.runtime.sendMessage({
+      type: "STORE_BLOB_STEP",
+      payload: {
+        sessionId: this.sessionId,
+        url: location.href,
+        pageTitle: document.title,
+        base64,
+        mimeType: "image/svg+xml",
+      },
     });
   }
 

@@ -9,7 +9,6 @@
 import { record } from "rrweb";
 import type { eventWithTime } from "rrweb/typings/types";
 import type { BaseCapture } from "./base-capture";
-import { putStep, countStepsBySession } from "@/storage/ephemeral-db";
 
 export class RrwebCapture implements BaseCapture {
   private sessionId: string;
@@ -47,17 +46,17 @@ export class RrwebCapture implements BaseCapture {
 
     if (this.events.length === 0) return;
 
-    const stepIndex = (await countStepsBySession(this.sessionId)) + 1;
-    await putStep({
-      sessionId: this.sessionId,
-      stepIndex,
-      timestamp: Date.now(),
-      url: location.href,
-      pageTitle: document.title,
-      blobId: null,
-      rrwebEvents: this.events,
-      actionStep: null,
-      spotlightSelector: null,
+    // Content scripts run at the host-page origin, not the extension origin.
+    // IDB writes must go through the service worker (extension origin) so the
+    // editor page can read them from the same database.
+    await chrome.runtime.sendMessage({
+      type: "RRWEB_BATCH",
+      payload: {
+        sessionId: this.sessionId,
+        events: this.events,
+        url: location.href,
+        pageTitle: document.title,
+      },
     });
 
     this.events = [];
