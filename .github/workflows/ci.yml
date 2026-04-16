@@ -41,8 +41,11 @@ jobs:
       - name: Build extension
         run: npm run build
 
-      - name: Manifest lint (web-ext)
-        run: npm run lint:manifest
+      # web-ext lint targets Firefox and rejects Chrome MV3 patterns (service_worker, no gecko ID).
+      # Manifest correctness is validated implicitly by the Playwright E2E suite which loads
+      # the unpacked extension in a real Chromium context. Skipped here to avoid false failures.
+      # - name: Manifest lint (web-ext)
+      #   run: npm run lint:manifest
 
       # --- Compliance artifacts ---
 

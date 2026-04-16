@@ -10,7 +10,7 @@
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.node.json",
     "lint": "eslint src tests --ext .ts,.tsx",
     "lint:sast": "semgrep --config=p/owasp-top-ten src/",
-    "lint:manifest": "web-ext lint --source-dir dist/",
+    "lint:manifest": "web-ext lint --source-dir dist/ --target chromium",
     "sbom": "cyclonedx-npm --output-format json --output-file sbom.json",
     "licenses": "license-checker --production --json --out licenses.json",
     "test:security": "playwright test --config=tests/playwright.config.ts tests/security/",
