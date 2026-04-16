@@ -8,6 +8,36 @@ import manifest from "./src/manifest";
 import type { Plugin } from "vite";
 
 /**
+ * Chrome's extension loader rejects any file or directory at the extension
+ * root whose name starts with "_". Vite emits "__vite-browser-external.js"
+ * as a stub for Node built-ins — rename it and patch all import references.
+ */
+function chromeNoUnderscoreFiles(): Plugin {
+  return {
+    name: "chrome-no-underscore-files",
+    enforce: "post",
+    generateBundle(_opts, bundle) {
+      for (const [name, chunk] of Object.entries(bundle)) {
+        const base = name.split("/").pop()!;
+        if (!base.startsWith("_")) continue;
+        const newBase = base.replace(/^_+/, "");
+        const newName = name.slice(0, name.length - base.length) + newBase;
+        // Patch import references in all other chunks
+        for (const c of Object.values(bundle)) {
+          if (c.type === "chunk") {
+            c.code = c.code
+              .replaceAll(`"./${base}"`, `"./${newBase}"`)
+              .replaceAll(`'./${base}'`, `'./${newBase}'`);
+          }
+        }
+        bundle[newName] = { ...chunk, fileName: newName } as typeof chunk;
+        delete bundle[name];
+      }
+    },
+  };
+}
+
+/**
  * Chrome's extension loader rejects JS files containing the U+FFFE
  * non-character (reversed BOM, EF BF BE), even though it's valid UTF-8.
  * This character appears in the CSS parser bundled with rrweb — it
@@ -38,6 +68,7 @@ export default defineConfig({
       // Editor page is not a standard MV3 entry point — add it explicitly
       additionalInputs: ["src/editor/editor.html"],
     }),
+    chromeNoUnderscoreFiles(),
     escapeNonCharacters(),
   ],
   resolve: {
