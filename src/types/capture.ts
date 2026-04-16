@@ -1,4 +1,4 @@
-import type { eventWithTime } from "rrweb";
+import type { eventWithTime } from "rrweb/typings/types";
 
 export type CaptureMode = "video" | "image-chain" | "rrweb" | "svg";
 

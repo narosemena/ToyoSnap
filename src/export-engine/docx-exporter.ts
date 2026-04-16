@@ -60,7 +60,7 @@ export async function exportDocx(sessionId: string): Promise<Blob> {
 
   const doc = new Document({ sections: [{ children }] });
   const buffer = await Packer.toBuffer(doc);
-  return new Blob([buffer], {
+  return new Blob([new Uint8Array(buffer)], {
     type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   });
 }

@@ -44,7 +44,7 @@ export async function exportPptx(sessionId: string): Promise<Blob> {
     }
   }
 
-  const arrayBuffer = await pptx.write({ outputType: "arraybuffer" });
+  const arrayBuffer = await pptx.write({ outputType: "arraybuffer" }) as ArrayBuffer;
   return new Blob([arrayBuffer], {
     type: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
   });

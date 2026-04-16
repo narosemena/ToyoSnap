@@ -117,7 +117,7 @@ export function PIICanvas({ step }: PIICanvasProps) {
       createdAt: Date.now(),
       updatedAt: Date.now(),
     };
-    await applyOperation(entry, scope, activeSessionId, String(step.stepIndex));
+    await applyOperation(entry, scope, activeSessionId, String(step!.stepIndex));
   }
 
   async function applyCustom() {

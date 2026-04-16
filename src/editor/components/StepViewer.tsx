@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import type { CaptureStep } from "@/types/capture";
 import { getBlob } from "@/storage/ephemeral-db";
-import rrwebPlayer from "rrweb-player";
+import rrwebPlayer, { type RRwebPlayerOptions } from "rrweb-player";
 import "rrweb-player/dist/style.css";
 
 interface StepViewerProps {
@@ -35,7 +35,7 @@ function RrwebViewer({ step }: { step: CaptureStep }) {
     playerRef.current = new rrwebPlayer({
       target: containerRef.current,
       props: {
-        events: step.rrwebEvents as Parameters<typeof rrwebPlayer>[0]["props"]["events"],
+        events: step.rrwebEvents as RRwebPlayerOptions["props"]["events"],
         width: 800,
         height: 500,
         autoPlay: false,
@@ -44,7 +44,7 @@ function RrwebViewer({ step }: { step: CaptureStep }) {
 
     return () => {
       if (playerRef.current) {
-        playerRef.current.$destroy();
+        (playerRef.current as unknown as { $destroy(): void }).$destroy();
         playerRef.current = null;
       }
     };
