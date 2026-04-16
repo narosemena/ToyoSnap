@@ -9,7 +9,7 @@
     "build": "vite build",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.node.json",
     "lint": "eslint src tests --ext .ts,.tsx",
-    "lint:sast": "semgrep --config=auto --config=p/owasp-top-ten src/",
+    "lint:sast": "semgrep --config=p/owasp-top-ten src/",
     "lint:manifest": "web-ext lint --source-dir dist/",
     "sbom": "cyclonedx-npm --output-format json --output-file sbom.json",
     "licenses": "license-checker --production --json --out licenses.json",
