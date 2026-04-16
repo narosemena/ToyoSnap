@@ -198,13 +198,13 @@ function RrwebViewer({ step }: { step: CaptureStep }) {
 function ImageViewer({ blobId, mimeType, step }: { blobId: string; mimeType: string; step: CaptureStep }) {
   const [buffer, setBuffer] = useState<ArrayBuffer | null>(null);
   const [loading, setLoading] = useState(true);
-  const imgRef = useRef<HTMLImageElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
   const [dragCurrent, setDragCurrent] = useState<{ x: number; y: number } | null>(null);
 
   const url = useObjectUrl(buffer, mimeType);
   const activeTool = useEditorStore((s) => s.activeTool);
-  const { activeSessionId, activeStepIndex } = useEditorStore();
+  const { activeSessionId, activeStepIndex, blurSettings, redactSettings } = useEditorStore();
   const { applyOperation, appliedOperations } = usePIIStore();
 
   useEffect(() => {
@@ -212,13 +212,15 @@ function ImageViewer({ blobId, mimeType, step }: { blobId: string; mimeType: str
     void getBlob(blobId).then((buf) => { setBuffer(buf ?? null); setLoading(false); });
   }, [blobId]);
 
-  // Show only region-based ops (image mode ops carry a region field)
-  const regionOps = appliedOperations.filter((op) => op.region);
+  // Only show region ops belonging to this specific step
+  const regionOps = appliedOperations.filter(
+    (op) => op.region && (op.stepIndex == null || op.stepIndex === step.stepIndex)
+  );
 
   function getRelPos(e: React.MouseEvent): { x: number; y: number } | null {
-    const img = imgRef.current;
-    if (!img) return null;
-    const r = img.getBoundingClientRect();
+    const el = containerRef.current;
+    if (!el) return null;
+    const r = el.getBoundingClientRect();
     return {
       x: Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)),
       y: Math.max(0, Math.min(1, (e.clientY - r.top) / r.height)),
@@ -248,7 +250,6 @@ function ImageViewer({ blobId, mimeType, step }: { blobId: string; mimeType: str
     const w = Math.abs(end.x - dragStart.x);
     const h = Math.abs(end.y - dragStart.y);
 
-    // Ignore accidental single clicks with no area
     if (w < 0.005 && h < 0.005) { setDragStart(null); setDragCurrent(null); return; }
 
     const entry: LedgerEntry = {
@@ -257,8 +258,11 @@ function ImageViewer({ blobId, mimeType, step }: { blobId: string; mimeType: str
       rrwebId: null,
       elementSelector: "",
       region: { x, y, w: Math.max(w, 0.01), h: Math.max(h, 0.01) },
+      stepIndex: step.stepIndex,
+      blurRadius: activeTool === "blur" ? (blurSettings?.radius ?? 8) : null,
+      redactColor: activeTool === "redact" ? (redactSettings?.color ?? "#000000") : null,
       applyGlobally: false,
-      replacementText: activeTool === "redact" ? "[REDACTED]" : "",
+      replacementText: activeTool === "redact" ? (redactSettings?.label ?? "[REDACTED]") : "",
       createdAt: Date.now(),
       updatedAt: Date.now(),
     };
@@ -291,8 +295,11 @@ function ImageViewer({ blobId, mimeType, step }: { blobId: string; mimeType: str
     );
   }
 
+  const isSvg = mimeType === "image/svg+xml";
+
   return (
     <div
+      ref={containerRef}
       className="relative w-full select-none"
       style={{ cursor: activeTool ? "crosshair" : "default" }}
       onMouseDown={onMouseDown}
@@ -300,14 +307,23 @@ function ImageViewer({ blobId, mimeType, step }: { blobId: string; mimeType: str
       onMouseUp={onMouseUp}
       onMouseLeave={() => { setDragStart(null); setDragCurrent(null); }}
     >
-      <img
-        ref={imgRef}
-        src={url}
-        alt="Captured screenshot"
-        className="w-full rounded block"
-        draggable={false}
-      />
-      {/* Redaction overlays */}
+      {isSvg ? (
+        /* object-src 'self' in manifest CSP allows blob: URLs at extension origin */
+        <object
+          data={url}
+          type="image/svg+xml"
+          className="w-full rounded block pointer-events-none"
+          aria-label="Captured SVG recording"
+        />
+      ) : (
+        <img
+          src={url}
+          alt="Captured screenshot"
+          className="w-full rounded block"
+          draggable={false}
+        />
+      )}
+      {/* Region overlays — scoped to this step only */}
       {(regionOps.length > 0 || liveRect) && (
         <svg
           className="absolute inset-0 w-full h-full pointer-events-none rounded"
@@ -325,7 +341,9 @@ function ImageViewer({ blobId, mimeType, step }: { blobId: string; mimeType: str
                 fill={
                   op.operationType === "blur"
                     ? "rgba(59,130,246,0.45)"
-                    : "rgba(0,0,0,0.88)"
+                    : op.redactColor
+                      ? `${op.redactColor}dd`
+                      : "rgba(0,0,0,0.88)"
                 }
                 stroke={
                   op.operationType === "blur" ? "rgb(59,130,246)" : "rgb(239,68,68)"

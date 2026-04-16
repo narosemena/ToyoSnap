@@ -20,7 +20,7 @@ import { BulkImportDropzone } from "./components/BulkImportDropzone";
 import { StorageUsage } from "./components/StorageUsage";
 import "../styles/globals.css";
 
-type RightPanelTab = "pii" | "export" | "import";
+type RightPanelTab = "pii" | "export";
 
 function Editor() {
   const { isHydrated, activeSessionId, activeStepIndex, setActiveSession, setHydrated, exportSensitivityAcknowledged } =
@@ -32,6 +32,7 @@ function Editor() {
   const [rightTab, setRightTab] = React.useState<RightPanelTab>("pii");
   const [checkedIds, setCheckedIds] = React.useState<Set<string>>(new Set());
   const [openMenuId, setOpenMenuId] = React.useState<string | null>(null);
+  const [importOpen, setImportOpen] = React.useState(false);
 
   // Load steps when active session changes
   useEffect(() => {
@@ -291,13 +292,13 @@ function Editor() {
 
                 {/* Right panel */}
                 <aside className="w-64 lg:w-80 shrink-0 border-l border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden">
-                  {/* Tab bar */}
+                  {/* Tab bar — Redact + Export only */}
                   <div
-                    className="flex border-b border-gray-200 dark:border-gray-700"
+                    className="flex border-b border-gray-200 dark:border-gray-700 shrink-0"
                     role="tablist"
                     aria-label="Editor panels"
                   >
-                    {(["pii", "export", "import"] as RightPanelTab[]).map((tab) => (
+                    {(["pii", "export"] as RightPanelTab[]).map((tab) => (
                       <button
                         key={tab}
                         role="tab"
@@ -314,13 +315,13 @@ function Editor() {
                             : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200",
                         ].join(" ")}
                       >
-                        {tab === "pii" ? "Redact" : tab === "export" ? "Export" : "Import"}
+                        {tab === "pii" ? "Redact" : "Export"}
                       </button>
                     ))}
                   </div>
 
-                  {/* Tab panels — each linked to its tab via id + aria-labelledby */}
-                  <div className="flex-1 overflow-auto p-4">
+                  {/* Tab panels */}
+                  <div className="flex-1 overflow-auto p-4 min-h-0">
                     <div
                       id="panel-pii"
                       role="tabpanel"
@@ -339,19 +340,35 @@ function Editor() {
                     >
                       <ExportPanel />
                     </div>
-                    <div
-                      id="panel-import"
-                      role="tabpanel"
-                      aria-labelledby="tab-import"
-                      hidden={rightTab !== "import"}
+                  </div>
+
+                  {/* Import — collapsible section pinned to bottom */}
+                  <div className="border-t border-gray-200 dark:border-gray-700 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setImportOpen((v) => !v)}
+                      className="w-full flex items-center justify-between px-4 py-2 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                      aria-expanded={importOpen}
                     >
-                      <BulkImportDropzone
-                        sessionId={activeSessionId}
-                        onImported={() => {
-                          void getStepsBySession(activeSessionId).then(setSteps);
-                        }}
-                      />
-                    </div>
+                      <span>Import</span>
+                      <svg
+                        width="12" height="12" viewBox="0 0 16 16" fill="currentColor"
+                        aria-hidden="true"
+                        className={`transition-transform duration-150 ${importOpen ? "rotate-180" : ""}`}
+                      >
+                        <path d="M1.5 4.5l6.5 7 6.5-7" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </button>
+                    {importOpen && (
+                      <div className="px-4 pb-4 border-t border-gray-200 dark:border-gray-700">
+                        <BulkImportDropzone
+                          sessionId={activeSessionId}
+                          onImported={() => {
+                            void getStepsBySession(activeSessionId).then(setSteps);
+                          }}
+                        />
+                      </div>
+                    )}
                   </div>
                 </aside>
               </div>

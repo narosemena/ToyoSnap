@@ -54,6 +54,22 @@ export class SvgCapture implements BaseCapture {
     try {
       const svgDocument = documentToSVG(document);
       const svgElement = svgDocument.documentElement as unknown as SVGElement;
+
+      // Add viewBox so the SVG scales correctly when displayed in <img>/<object>.
+      // dom-to-svg emits fixed width/height but no viewBox — without viewBox the
+      // browser treats dimensions as absolute and CSS width:100% has no effect.
+      const wAttr = svgElement.getAttribute("width");
+      const hAttr = svgElement.getAttribute("height");
+      if (!svgElement.getAttribute("viewBox") && wAttr && hAttr) {
+        const w = parseFloat(wAttr);
+        const h = parseFloat(hAttr);
+        if (w > 0 && h > 0) {
+          svgElement.setAttribute("viewBox", `0 0 ${w} ${h}`);
+          svgElement.removeAttribute("width");
+          svgElement.removeAttribute("height");
+        }
+      }
+
       this.addLayers(svgElement);
 
       const serialized = new XMLSerializer().serializeToString(svgDocument);
