@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+jobs:
+  ci:
+    name: Typecheck · Lint · Build · Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      # --- Static analysis (fast, no build required) ---
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint (ESLint + eslint-plugin-security)
+        run: npm run lint
+
+      - name: SAST (semgrep OWASP scan)
+        run: npm run lint:sast
+
+      # --- Build ---
+
+      - name: Build extension
+        run: npm run build
+
+      - name: Manifest lint (web-ext)
+        run: npm run lint:manifest
+
+      # --- Compliance artifacts ---
+
+      - name: Generate SBOM
+        run: npm run sbom
+
+      - name: Generate OSS license inventory
+        run: npm run licenses
+
+      # --- Tests (security gate runs first and blocks everything below on failure) ---
+
+      - name: Install Xvfb
+        run: sudo apt-get install -y xvfb
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Security tests (gate — failure blocks all suites below)
+        run: xvfb-run --auto-servernum npm run test:security
+
+      - name: Unit tests
+        run: npm run test:unit
+
+      - name: E2E tests (includes zero-egress and accessibility)
+        run: xvfb-run --auto-servernum npm run test:e2e
+
+      # --- Verify no source maps shipped ---
+
+      - name: Assert no .map files in dist/
+        run: |
+          mapfiles=$(find dist/ -name "*.map" 2>/dev/null || true)
+          if [ -n "$mapfiles" ]; then
+            echo "ERROR: source maps found in dist/:"
+            echo "$mapfiles"
+            exit 1
+          fi
+          echo "OK: no .map files in dist/"

@@ -62,7 +62,7 @@ export const startCapture = async (
 
   // Expose rrweb events for security tests
   if (mode === "rrweb") {
-    (window as Record<string, unknown>).__toyosnap_rrweb_events = [];
+    (window as unknown as Record<string, unknown>).__toyosnap_rrweb_events = [];
   }
 };
 

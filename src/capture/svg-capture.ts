@@ -28,7 +28,7 @@ export class SvgCapture implements BaseCapture {
 
   private async onUserClick(_e: MouseEvent): Promise<void> {
     const svgDocument = documentToSVG(document);
-    const svgElement = svgDocument.documentElement;
+    const svgElement = svgDocument.documentElement as unknown as SVGElement;
 
     // Extract 4 named layers
     await this.addLayers(svgElement);

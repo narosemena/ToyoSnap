@@ -7,14 +7,14 @@
  * Pinned to rrweb@1.1.3 stable. See package.json for upgrade path comment.
  */
 import { record } from "rrweb";
-import type { eventWithTime } from "rrweb";
+import type { eventWithTime } from "rrweb/typings/types";
 import type { BaseCapture } from "./base-capture";
 import { putStep, countStepsBySession } from "@/storage/ephemeral-db";
 
 export class RrwebCapture implements BaseCapture {
   private sessionId: string;
   private events: eventWithTime[] = [];
-  private stopRecording: (() => void) | null = null;
+  private stopRecording: (() => void) | null | undefined = null;
 
   constructor(sessionId: string) {
     this.sessionId = sessionId;
@@ -22,7 +22,7 @@ export class RrwebCapture implements BaseCapture {
 
   async start(): Promise<void> {
     this.events = [];
-    (window as Record<string, unknown>).__toyosnap_rrweb_events = this.events;
+    (window as unknown as Record<string, unknown>).__toyosnap_rrweb_events = this.events;
 
     this.stopRecording = record({
       emit: (event) => {

@@ -1,3 +1,4 @@
+/// <reference types="vitest" />
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
@@ -48,6 +49,9 @@ export default defineConfig({
     // Output directory for the compiled extension assets
     outDir: "dist",
     emptyOutDir: true,
+    // Explicitly disable source maps — never ship them in a production extension;
+    // they expose internal structure and add unnecessary size.
+    sourcemap: false,
   },
   test: {
     // Exclude worktrees so vitest doesn't double-run tests from git worktrees

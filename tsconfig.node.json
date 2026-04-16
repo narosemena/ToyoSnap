@@ -1,16 +1,20 @@
 {
   "compilerOptions": {
-    "composite": true,
     "skipLibCheck": true,
     "module": "ESNext",
     "moduleResolution": "bundler",
     "allowSyntheticDefaultImports": true,
     "strict": true,
-    "types": ["node", "chrome"]
+    "noEmit": true,
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "types": ["node", "chrome"],
+    "paths": {
+      "@/*": ["./src/*"]
+    }
   },
   "include": [
     "vite.config.ts",
-    "src/manifest.ts",
-    "tests/**/*.ts"
+    "src/manifest.ts"
   ]
 }
