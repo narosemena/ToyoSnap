@@ -301,30 +301,22 @@ function ImageViewer({ blobId, mimeType, step }: { blobId: string; mimeType: str
     <div
       ref={containerRef}
       className="relative w-full select-none"
-      style={{ cursor: activeTool ? "crosshair" : "default" }}
-      onMouseDown={onMouseDown}
-      onMouseMove={onMouseMove}
-      onMouseUp={onMouseUp}
-      onMouseLeave={() => { setDragStart(null); setDragCurrent(null); }}
+      // Drag-to-redact is disabled for SVG — no pixel coordinates to operate on
+      style={{ cursor: !isSvg && activeTool ? "crosshair" : "default" }}
+      onMouseDown={!isSvg ? onMouseDown : undefined}
+      onMouseMove={!isSvg ? onMouseMove : undefined}
+      onMouseUp={!isSvg ? onMouseUp : undefined}
+      onMouseLeave={!isSvg ? () => { setDragStart(null); setDragCurrent(null); } : undefined}
     >
-      {isSvg ? (
-        /* object-src 'self' in manifest CSP allows blob: URLs at extension origin */
-        <object
-          data={url}
-          type="image/svg+xml"
-          className="w-full rounded block pointer-events-none"
-          aria-label="Captured SVG recording"
-        />
-      ) : (
-        <img
-          src={url}
-          alt="Captured screenshot"
-          className="w-full rounded block"
-          draggable={false}
-        />
-      )}
-      {/* Region overlays — scoped to this step only */}
-      {(regionOps.length > 0 || liveRect) && (
+      {/* SVG: use <img> — preserves viewBox aspect ratio better than <object> */}
+      <img
+        src={url}
+        alt={isSvg ? "Captured SVG recording" : "Captured screenshot"}
+        className="w-full h-auto rounded block"
+        draggable={false}
+      />
+      {/* Region overlays — scoped to this step only, pixel recordings only */}
+      {!isSvg && (regionOps.length > 0 || liveRect) && (
         <svg
           className="absolute inset-0 w-full h-full pointer-events-none rounded"
           viewBox="0 0 1 1"
@@ -370,7 +362,7 @@ function ImageViewer({ blobId, mimeType, step }: { blobId: string; mimeType: str
           )}
         </svg>
       )}
-      {activeTool && !dragStart && (
+      {!isSvg && activeTool && !dragStart && (
         <div className="absolute top-3 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-full shadow-lg select-none pointer-events-none whitespace-nowrap">
           Drag to {activeTool === "blur" ? "blur" : "redact"} a region
         </div>

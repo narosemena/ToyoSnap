@@ -245,6 +245,27 @@ export function PIICanvas({ step }: PIICanvasProps) {
     );
   }
 
+  // SVG recordings are vector files — redact downstream in an SVG editor
+  if (step.mimeType === "image/svg+xml") {
+    return (
+      <div className="rounded-lg border border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 p-4">
+        <div className="flex items-start gap-3">
+          <svg className="shrink-0 mt-0.5 text-amber-500" width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+            <path d="M8 1a7 7 0 100 14A7 7 0 008 1zM7 5a1 1 0 112 0v4a1 1 0 11-2 0V5zm1 7a1 1 0 110-2 1 1 0 010 2z"/>
+          </svg>
+          <div>
+            <p className="text-sm font-semibold text-amber-800 dark:text-amber-300 mb-1">
+              SVG recording
+            </p>
+            <p className="text-xs text-amber-700 dark:text-amber-400 leading-relaxed">
+              SVG captures are vector files containing editable elements. Apply privacy redactions in an SVG editor (Inkscape, Illustrator, or Figma) before sharing.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   function handleBlurToggle() {
     // First-time: no saved settings yet → show dialog instead of activating
     if (!localStorage.getItem(LS_BLUR)) {
@@ -332,41 +353,51 @@ export function PIICanvas({ step }: PIICanvasProps) {
     <section aria-label="PII redaction canvas">
       {/* Tool bar */}
       <div className="space-y-2 mb-3">
-        {/* Row 1: Tool buttons + Undo/Redo */}
+        {/* Row 1: Tool toggles + icon Undo/Redo */}
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-gray-700 dark:text-gray-300 shrink-0">Tool:</span>
-          <ToolToggle
-            tool="blur"
-            label="Blur"
-            active={activeTool === "blur"}
-            onToggle={handleBlurToggle}
-            onGear={handleBlurGear}
-          />
-          <ToolToggle
-            tool="redact"
-            label="Redact"
-            active={activeTool === "redact"}
-            onToggle={handleRedactToggle}
-            onGear={handleRedactGear}
-          />
-          <div className="ml-auto flex gap-1">
+          <div className="flex items-center gap-1.5 flex-1 min-w-0">
+            <ToolToggle
+              tool="blur"
+              label="Blur"
+              active={activeTool === "blur"}
+              onToggle={handleBlurToggle}
+              onGear={handleBlurGear}
+            />
+            <ToolToggle
+              tool="redact"
+              label="Redact"
+              active={activeTool === "redact"}
+              onToggle={handleRedactToggle}
+              onGear={handleRedactGear}
+            />
+          </div>
+          {/* Icon-only Undo/Redo to save horizontal space */}
+          <div className="flex gap-1 shrink-0">
             <button
               type="button"
               disabled={undoStack.length === 0}
               onClick={undo}
-              className="px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-600 disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-gray-700"
+              className="p-1.5 rounded border border-gray-300 dark:border-gray-600 disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400"
               aria-label="Undo last operation"
+              title="Undo"
             >
-              Undo
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M2.5 6H10a4 4 0 0 1 0 8H5"/>
+                <path d="M2.5 6l3-3M2.5 6l3 3"/>
+              </svg>
             </button>
             <button
               type="button"
               disabled={redoStack.length === 0}
               onClick={redo}
-              className="px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-600 disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-gray-700"
+              className="p-1.5 rounded border border-gray-300 dark:border-gray-600 disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400"
               aria-label="Redo last undone operation"
+              title="Redo"
             >
-              Redo
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M13.5 6H6a4 4 0 0 0 0 8h5"/>
+                <path d="M13.5 6l-3-3M13.5 6l-3 3"/>
+              </svg>
             </button>
           </div>
         </div>
