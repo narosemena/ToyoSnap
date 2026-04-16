@@ -128,8 +128,12 @@ chrome.runtime.onMessage.addListener(
           };
           try {
             const dataUrl = await chrome.tabs.captureVisibleTab({ format: "png" });
-            const response = await fetch(dataUrl);
-            const buffer = await response.arrayBuffer();
+            // Decode base64 directly — fetch(data:...) violates connect-src 'self' CSP.
+            const base64 = dataUrl.slice(dataUrl.indexOf(",") + 1);
+            const binary = atob(base64);
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+            const buffer = bytes.buffer;
             const blobId = crypto.randomUUID();
             await putBlob(blobId, buffer);
             const stepIndex = (await countStepsBySession(sessionId)) + 1;
@@ -303,9 +307,11 @@ async function handleCaptureVisibleTab(
 ): Promise<void> {
   try {
     const dataUrl = await chrome.tabs.captureVisibleTab({ format: "png" });
-    const response = await fetch(dataUrl);
-    const buffer = await response.arrayBuffer();
-    sendResponse({ buffer });
+    const base64 = dataUrl.slice(dataUrl.indexOf(",") + 1);
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    sendResponse({ buffer: bytes.buffer });
   } catch (err) {
     sendResponse({ error: String(err) });
   }
