@@ -12,7 +12,7 @@ import { CursorTracker } from "@/capture/cursor-tracker";
 import { StepLogBuilder } from "@/action-logger/step-log-builder";
 import { extractDesignTokens } from "@/lib/design-extractor";
 import { detectAntiPatterns } from "@/lib/anti-pattern";
-import { getStepsBySession, putDesignSystem } from "@/storage/ephemeral-db";
+import { getStepsBySession } from "@/storage/ephemeral-db";
 
 let engine: BaseCapture | null = null;
 let cursorTracker: CursorTracker | null = null;
@@ -93,16 +93,21 @@ export const stopCapture = async (): Promise<void> => {
     urlSlug: new URL(s.url).pathname.replace(/\//g, "-").replace(/^-/, "") || "root",
   }));
 
-  await putDesignSystem({
-    sessionId,
-    capturedAt: Date.now(),
-    colors,
-    typography,
-    shadows,
-    radii,
-    antiPatterns,
-    pageBreadcrumbs,
+  // Route design system write through the SW (content scripts use host-page IDB)
+  chrome.runtime.sendMessage({
+    type: "DESIGN_SYSTEM_SAVED",
+    payload: {
+      sessionId,
+      designSystem: {
+        sessionId,
+        capturedAt: Date.now(),
+        colors,
+        typography,
+        shadows,
+        radii,
+        antiPatterns,
+        pageBreadcrumbs,
+      },
+    },
   });
-
-  chrome.runtime.sendMessage({ type: "DESIGN_SYSTEM_SAVED", payload: { sessionId } });
 };

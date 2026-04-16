@@ -13,4 +13,4 @@ export type ExtensionMessage =
   | { type: "CAPTURE_IMAGE_STEP"; payload: { sessionId: string; url: string; pageTitle: string } }
   | { type: "STORE_BLOB_STEP"; payload: { sessionId: string; url: string; pageTitle: string; base64: string; mimeType: string } }
   | { type: "EXPORT_SESSION_DATA"; payload: { sessionId: string } }
-  | { type: "DESIGN_SYSTEM_SAVED"; payload: { sessionId: string } };
+  | { type: "DESIGN_SYSTEM_SAVED"; payload: { sessionId: string; designSystem?: import("./design-system").DesignSystem } };

@@ -18,10 +18,12 @@ import {
   countStepsBySession,
   putStep,
   putBlob,
+  putDesignSystem,
   getStepsBySession,
 } from "@/storage/ephemeral-db";
 import type { ExtensionMessage } from "@/types/messages";
 import type { CaptureSession, CaptureMode, CaptureStep } from "@/types/capture";
+import type { DesignSystem } from "@/types/design-system";
 
 // —— Initialization —————————————————————————————————————————————————————————
 
@@ -187,6 +189,14 @@ chrome.runtime.onMessage.addListener(
           sendResponse({ tabId: plane?.activeTabId ?? null });
         })();
         return true;
+      }
+
+      case "DESIGN_SYSTEM_SAVED": {
+        void (async () => {
+          const { designSystem } = msg.payload as { sessionId: string; designSystem: DesignSystem };
+          if (designSystem) await putDesignSystem(designSystem);
+        })();
+        break;
       }
 
       default:
