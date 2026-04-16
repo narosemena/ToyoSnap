@@ -54,13 +54,12 @@ export const startCapture = async (
     cursorTracker.start();
   }
 
-  // Action logger tracks click targets for image-chain/video/svg modes.
-  // Not used for rrweb mode — screenshots carry their own metadata and the
-  // logger would race with the screenshot handler to write the same stepIndex.
-  if (mode !== "rrweb") {
-    stepLogger = new StepLogBuilder(sessionId);
-    stepLogger.start();
-  }
+  // StepLogBuilder is disabled for all current capture modes.
+  // Every active mode (image-chain, svg) writes steps via the service worker,
+  // and StepLogBuilder's concurrent countStepsBySession+putStep races with
+  // those writes to produce duplicate or overwritten steps.
+  // Re-enable when a mode is added that uses actionStep data exclusively.
+  void stepLogger; // suppress unused-variable lint
 
   await engine.start();
 };

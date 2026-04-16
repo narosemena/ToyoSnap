@@ -11,7 +11,7 @@ import "../styles/globals.css";
 
 function Popup() {
   // Local state for configuration BEFORE recording starts
-  const [mode, setMode] = React.useState<CaptureMode>("rrweb");
+  const [mode, setMode] = React.useState<CaptureMode>("image-chain");
   const [captureCursor, setCaptureCursor] = React.useState(true);
 
   // Hook handles global recording state synced with Service Worker

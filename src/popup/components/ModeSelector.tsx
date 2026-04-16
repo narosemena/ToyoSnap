@@ -1,11 +1,10 @@
 import React from "react";
 import type { CaptureMode } from "@/types/capture";
 
-const MODES: { value: CaptureMode; label: string }[] = [
-  { value: "rrweb", label: "DOM Replay" },
-  { value: "image-chain", label: "Screenshot Chain" },
-  { value: "video", label: "Video" },
-  { value: "svg", label: "SVG Layers" },
+// DOM Replay and Video are reserved for a future release.
+const MODES: { value: CaptureMode; label: string; description: string }[] = [
+  { value: "image-chain", label: "Screenshot Chain", description: "PNG snapshot on each click" },
+  { value: "svg", label: "SVG Layers", description: "Vector capture on each click" },
 ];
 
 interface Props {
@@ -32,7 +31,7 @@ export function ModeSelector({ value, onChange, disabled }: Props) {
       >
         {MODES.map((m) => (
           <option key={m.value} value={m.value}>
-            {m.label}
+            {m.label} — {m.description}
           </option>
         ))}
       </select>
