@@ -3,7 +3,7 @@
  * All rrweb event data, player JS, and player CSS are embedded inline.
  * Zero external requests — safe for Zero-Egress policy.
  */
-import { getStepsBySession } from "@/storage/ephemeral-db";
+import { getStepsBySession, getStep } from "@/storage/ephemeral-db";
 // Vite ?raw imports bundle the file content as a string at build time
 import rrwebPlayerJs from "rrweb-player/dist/index.js?raw";
 import rrwebPlayerCss from "rrweb-player/dist/style.css?raw";
@@ -16,22 +16,24 @@ export async function exportHtmlReplay(sessionId: string): Promise<Blob> {
   let lastHostname = "";
 
   for (const step of steps) {
+    // getStepsBySession returns steps with rrwebEvents: null — load full step to decrypt
+    const fullStep = await getStep(step.sessionId, step.stepIndex) ?? step;
+
     const hostname = (() => {
       try {
-        return new URL(step.url).hostname;
+        return new URL(fullStep.url).hostname;
       } catch {
-        return step.url;
+        return fullStep.url;
       }
     })();
 
     if (hostname !== lastHostname && lastHostname !== "") {
-      // Page transition  -  embed as a custom event placeholder
       allEvents.push({ type: "page-transition", hostname });
     }
     lastHostname = hostname;
 
-    if (step.rrwebEvents) {
-      allEvents.push(...step.rrwebEvents);
+    if (fullStep.rrwebEvents) {
+      allEvents.push(...fullStep.rrwebEvents);
     }
   }
 

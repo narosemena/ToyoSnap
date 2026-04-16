@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import type { CaptureStep } from "@/types/capture";
-import { getBlob } from "@/storage/ephemeral-db";
+import { getBlob, getStep } from "@/storage/ephemeral-db";
 import rrwebPlayer, { type RRwebPlayerOptions } from "rrweb-player";
 import "rrweb-player/dist/style.css";
 
@@ -111,6 +111,20 @@ function BlobViewer({ blobId, mimeType, tag }: { blobId: string; mimeType: strin
 }
 
 export function StepViewer({ step }: StepViewerProps) {
+  // getStepsBySession returns steps with rrwebEvents: null (encrypted separately).
+  // Load the full step with decrypted events whenever the selection changes.
+  const [fullStep, setFullStep] = useState<CaptureStep | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!step) { setFullStep(null); return; }
+    setLoading(true);
+    void getStep(step.sessionId, step.stepIndex).then((s) => {
+      setFullStep(s ?? step);
+      setLoading(false);
+    });
+  }, [step?.sessionId, step?.stepIndex]);
+
   if (!step) {
     return (
       <div className="flex items-center justify-center h-64 text-sm text-gray-500 dark:text-gray-400">
@@ -119,29 +133,37 @@ export function StepViewer({ step }: StepViewerProps) {
     );
   }
 
+  if (loading || !fullStep) {
+    return (
+      <div className="flex items-center justify-center h-64 text-sm text-gray-500 dark:text-gray-400 motion-safe:animate-pulse">
+        Loading step…
+      </div>
+    );
+  }
+
   // Determine mode from step content
-  const hasRrweb = Boolean(step.rrwebEvents?.length);
-  const hasBlob = Boolean(step.blobId);
+  const hasRrweb = Boolean(fullStep.rrwebEvents?.length);
+  const hasBlob = Boolean(fullStep.blobId);
 
   // video mode: blob with no actionStep and no rrweb events (long recording)
   // image-chain / svg: blob with actionStep
-  const isVideo = hasBlob && !hasRrweb && !step.actionStep;
+  const isVideo = hasBlob && !hasRrweb && !fullStep.actionStep;
 
   return (
-    <section aria-label={`Step ${step.stepIndex} preview`} className="w-full">
+    <section aria-label={`Step ${fullStep.stepIndex} preview`} className="w-full">
       <div className="mb-2 flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
         <span className="font-medium text-gray-900 dark:text-gray-100">
-          Step {step.stepIndex}
+          Step {fullStep.stepIndex}
         </span>
-        {step.pageTitle && <span>—</span>}
-        {step.pageTitle && <span className="truncate">{step.pageTitle}</span>}
+        {fullStep.pageTitle && <span>—</span>}
+        {fullStep.pageTitle && <span className="truncate">{fullStep.pageTitle}</span>}
       </div>
 
-      {hasRrweb && <RrwebViewer step={step} />}
+      {hasRrweb && <RrwebViewer step={fullStep} />}
 
-      {!hasRrweb && hasBlob && step.blobId && (
+      {!hasRrweb && hasBlob && fullStep.blobId && (
         <BlobViewer
-          blobId={step.blobId}
+          blobId={fullStep.blobId}
           mimeType={isVideo ? "video/webm" : "image/png"}
           tag={isVideo ? "video" : "img"}
         />
