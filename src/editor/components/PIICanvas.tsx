@@ -183,6 +183,14 @@ export function PIICanvas({ step }: PIICanvasProps) {
         </div>
       </div>
 
+      {/* Active-tool hint */}
+      {activeTool && (
+        <div className="mb-4 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 px-3 py-2 text-xs text-blue-700 dark:text-blue-300">
+          <strong className="font-semibold capitalize">{activeTool} active.</strong>{" "}
+          For DOM recordings: click any element in the preview. For screenshots: drag a region over the preview.
+        </div>
+      )}
+
       {/* Candidate regions */}
       {candidateRegions.length > 0 && (
         <div className="mb-4">
@@ -249,7 +257,13 @@ export function PIICanvas({ step }: PIICanvasProps) {
                 }`}>
                   {op.operationType}
                 </span>
-                <span className="truncate">{op.elementSelector}</span>
+                {op.region ? (
+                  <span className="truncate text-gray-500">
+                    region {Math.round(op.region.w * 100)}%×{Math.round(op.region.h * 100)}%
+                  </span>
+                ) : (
+                  <span className="truncate">{op.elementSelector}</span>
+                )}
                 {op.applyGlobally && (
                   <span className="shrink-0 text-gray-400">(global)</span>
                 )}

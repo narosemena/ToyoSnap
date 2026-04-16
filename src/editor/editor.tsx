@@ -168,7 +168,7 @@ function Editor() {
               {/* Step viewer + right panel */}
               <div className="flex flex-1 min-h-0 overflow-hidden">
                 {/* Center: step preview */}
-                <section className="flex-1 overflow-auto p-4 min-w-0">
+                <section className="flex-1 flex flex-col overflow-hidden p-4 min-w-0">
                   <StepViewer
                     step={steps.find((s) => s.stepIndex === activeStepIndex) ?? steps[0] ?? null}
                   />
