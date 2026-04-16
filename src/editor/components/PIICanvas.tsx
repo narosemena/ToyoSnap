@@ -129,53 +129,57 @@ export function PIICanvas({ step }: PIICanvasProps) {
 
   return (
     <section aria-label="PII redaction canvas">
-      {/* Tool bar */}
-      <div className="flex items-center gap-2 mb-4">
-        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Tool:</span>
-        <ToolToggle
-          tool="blur"
-          label="Blur"
-          active={activeTool === "blur"}
-          onToggle={() => setActiveTool(activeTool === "blur" ? null : "blur")}
-        />
-        <ToolToggle
-          tool="redact"
-          label="Redact"
-          active={activeTool === "redact"}
-          onToggle={() => setActiveTool(activeTool === "redact" ? null : "redact")}
-        />
-
-        <span className="ml-4 text-sm font-medium text-gray-700 dark:text-gray-300">Scope:</span>
-        <select
-          value={scope}
-          onChange={(e) => setScope(e.target.value as "local" | "global")}
-          className="text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-2 py-1"
-          aria-label="Redaction scope"
-        >
-          <option value="local">This step only</option>
-          <option value="global">All steps</option>
-        </select>
-
-        {/* Undo / Redo */}
-        <div className="ml-auto flex gap-1">
-          <button
-            type="button"
-            disabled={undoStack.length === 0}
-            onClick={undo}
-            className="px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-600 disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-gray-700"
-            aria-label="Undo last operation"
+      {/* Tool bar — two rows to prevent overflow in narrow panel */}
+      <div className="space-y-2 mb-4">
+        {/* Row 1: Tool buttons + Undo/Redo */}
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-gray-700 dark:text-gray-300 shrink-0">Tool:</span>
+          <ToolToggle
+            tool="blur"
+            label="Blur"
+            active={activeTool === "blur"}
+            onToggle={() => setActiveTool(activeTool === "blur" ? null : "blur")}
+          />
+          <ToolToggle
+            tool="redact"
+            label="Redact"
+            active={activeTool === "redact"}
+            onToggle={() => setActiveTool(activeTool === "redact" ? null : "redact")}
+          />
+          {/* Undo / Redo */}
+          <div className="ml-auto flex gap-1">
+            <button
+              type="button"
+              disabled={undoStack.length === 0}
+              onClick={undo}
+              className="px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-600 disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-gray-700"
+              aria-label="Undo last operation"
+            >
+              Undo
+            </button>
+            <button
+              type="button"
+              disabled={redoStack.length === 0}
+              onClick={redo}
+              className="px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-600 disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-gray-700"
+              aria-label="Redo last undone operation"
+            >
+              Redo
+            </button>
+          </div>
+        </div>
+        {/* Row 2: Scope selector */}
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-gray-700 dark:text-gray-300 shrink-0">Scope:</span>
+          <select
+            value={scope}
+            onChange={(e) => setScope(e.target.value as "local" | "global")}
+            className="flex-1 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-2 py-1"
+            aria-label="Redaction scope"
           >
-            Undo
-          </button>
-          <button
-            type="button"
-            disabled={redoStack.length === 0}
-            onClick={redo}
-            className="px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-600 disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-gray-700"
-            aria-label="Redo last undone operation"
-          >
-            Redo
-          </button>
+            <option value="local">This step only</option>
+            <option value="global">All steps</option>
+          </select>
         </div>
       </div>
 

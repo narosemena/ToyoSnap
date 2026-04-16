@@ -289,6 +289,11 @@ async function handleStopCapture(): Promise<void> {
   } catch {
     // Tab likely closed
   }
+
+  // Auto-open the editor vault so the user lands directly on their recording
+  const editorUrl = chrome.runtime.getURL("src/editor/editor.html") +
+    `?session=${activeSessionId}`;
+  await chrome.tabs.create({ url: editorUrl });
 }
 
 async function handleCaptureVisibleTab(

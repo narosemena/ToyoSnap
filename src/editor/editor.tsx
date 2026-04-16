@@ -17,6 +17,7 @@ import { StepViewer } from "./components/StepViewer";
 import { PIICanvas } from "./components/PIICanvas";
 import { ExportPanel } from "./components/export/ExportPanel";
 import { BulkImportDropzone } from "./components/BulkImportDropzone";
+import { StorageUsage } from "./components/StorageUsage";
 import "../styles/globals.css";
 
 type RightPanelTab = "pii" | "export" | "import";
@@ -136,7 +137,8 @@ function Editor() {
             )}
           </nav>
 
-          <div className="mt-auto">
+          <div className="mt-auto space-y-3">
+            <StorageUsage />
             <KeyboardShortcutsHint />
           </div>
         </aside>
