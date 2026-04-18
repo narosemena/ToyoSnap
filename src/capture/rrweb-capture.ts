@@ -33,6 +33,8 @@ export class RrwebCapture implements BaseCapture {
       setTimeout(() => void this.captureScreenshot(), 0);
     };
     document.addEventListener("click", this.clickHandler, { passive: true });
+    // Capture initial screen state so step 1 always exists
+    setTimeout(() => void this.captureScreenshot(), 0);
   }
 
   async stop(): Promise<void> {

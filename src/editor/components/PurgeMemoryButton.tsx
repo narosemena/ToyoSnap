@@ -3,18 +3,20 @@ import { ConfirmDialog } from "./ConfirmDialog";
 import { purgeAll } from "@/storage/purge";
 import { announce } from "./LiveAnnouncer";
 import { usePIIStore } from "../store/pii-store";
-import { useEditorStore } from "../store/editor-store";
 
-export function PurgeMemoryButton() {
+interface Props {
+  onPurged?: () => void;
+}
+
+export function PurgeMemoryButton({ onPurged }: Props) {
   const [open, setOpen] = useState(false);
   const clearStacks = usePIIStore((s) => s.clearStacks);
-  const setHydrated = useEditorStore((s) => s.setHydrated);
 
   async function handleConfirm() {
     setOpen(false);
     await purgeAll();
     clearStacks();
-    setHydrated(false);
+    onPurged?.();
     announce("All captured data has been purged.");
   }
 

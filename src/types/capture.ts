@@ -21,6 +21,8 @@ export interface CaptureSession {
   stepCount: number;
   captureCursor: boolean;
   hostnames: string[];
+  /** Only set for image-chain sessions. Determines capture + export format. */
+  imageFormat?: "png" | "jpeg";
 }
 
 export interface CaptureStep {

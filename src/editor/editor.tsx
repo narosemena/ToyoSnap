@@ -82,6 +82,10 @@ function Editor() {
   const { loadOperations } = usePIIStore();
   const [sessions, setSessions] = React.useState<CaptureSession[]>([]);
   const [steps, setSteps] = React.useState<CaptureStep[]>([]);
+  const handleStepUpdated = React.useCallback((updated: CaptureStep) =>
+    setSteps((prev) => prev.map((s) =>
+      s.sessionId === updated.sessionId && s.stepIndex === updated.stepIndex ? updated : s
+    )), []);
   const [showExportWarning, setShowExportWarning] = React.useState(false);
   const [rightTab, setRightTab] = React.useState<RightPanelTab>("pii");
   const [checkedIds, setCheckedIds] = React.useState<Set<string>>(new Set());
@@ -219,7 +223,12 @@ function Editor() {
               <div className="flex items-center justify-between shrink-0">
                 <span className="font-semibold text-sm truncate">ToyoSnap</span>
                 <div className="flex items-center gap-1">
-                  <PurgeMemoryButton />
+                  <PurgeMemoryButton onPurged={() => {
+                    setSessions([]);
+                    setSteps([]);
+                    setActiveSession(null);
+                    loadOperations([]);
+                  }} />
                   <button
                     type="button"
                     onClick={() => setLeftCollapsed(true)}
@@ -330,6 +339,7 @@ function Editor() {
                 <section className="flex-1 flex flex-col overflow-hidden p-4 min-w-0">
                   <StepViewer
                     step={steps.find((s) => s.stepIndex === activeStepIndex) ?? steps[0] ?? null}
+                    onStepUpdated={handleStepUpdated}
                   />
                 </section>
 

@@ -4,6 +4,7 @@ import { ModeSelector } from "./components/ModeSelector";
 import { RecordButton } from "./components/RecordButton";
 import { CursorToggle } from "./components/CursorToggle";
 import { StatusBadge } from "./components/StatusBadge";
+import { ImageFormatSelector } from "./components/ImageFormatSelector";
 import { useSession } from "./hooks/useSession";
 import type { CaptureMode } from "@/types/capture";
 import type { ExtensionMessage } from "@/types/messages";
@@ -12,7 +13,8 @@ import "../styles/globals.css";
 function Popup() {
   // Local state for configuration BEFORE recording starts
   const [mode, setMode] = React.useState<CaptureMode>("image-chain");
-  const [captureCursor, setCaptureCursor] = React.useState(true);
+  const [captureCursor, setCaptureCursor] = React.useState(false);
+  const [imageFormat, setImageFormat] = React.useState<"png" | "jpeg">("png");
 
   // Hook handles global recording state synced with Service Worker
   const { 
@@ -40,7 +42,7 @@ function Popup() {
     } else {
       const msg: ExtensionMessage = {
         type: "START_CAPTURE",
-        payload: { mode, captureCursor },
+        payload: { mode, captureCursor, imageFormat: mode === "image-chain" ? imageFormat : undefined },
       };
       chrome.runtime.sendMessage(msg, () => {
         refreshState();
@@ -63,16 +65,24 @@ function Popup() {
         <StatusBadge isRecording={isRecording} />
       </div>
 
-      <ModeSelector 
-        value={activeMode} 
-        onChange={setMode} 
-        disabled={isRecording} 
+      <ModeSelector
+        value={activeMode}
+        onChange={setMode}
+        disabled={isRecording}
       />
-      
-      <CursorToggle 
-        checked={activeCursor} 
-        onChange={setCaptureCursor} 
-        disabled={isRecording} 
+
+      {activeMode === "image-chain" && (
+        <ImageFormatSelector
+          value={imageFormat}
+          onChange={setImageFormat}
+          disabled={isRecording}
+        />
+      )}
+
+      <CursorToggle
+        checked={activeCursor}
+        onChange={setCaptureCursor}
+        disabled={isRecording}
       />
 
       <div className="mt-2">

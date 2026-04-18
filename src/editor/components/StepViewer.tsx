@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import type { CaptureStep } from "@/types/capture";
 import type { LedgerEntry } from "@/types/ledger";
-import { getBlob, getStep } from "@/storage/ephemeral-db";
+import { getBlob, getStep, updateStepPageTitle } from "@/storage/ephemeral-db";
 import { useEditorStore } from "@/editor/store/editor-store";
 import { usePIIStore } from "@/editor/store/pii-store";
 import rrwebPlayer, { type RRwebPlayerOptions } from "rrweb-player";
@@ -9,6 +9,7 @@ import "rrweb-player/dist/style.css";
 
 interface StepViewerProps {
   step: CaptureStep | null;
+  onStepUpdated?: (step: CaptureStep) => void;
 }
 
 // ——— CSS selector generator for elements inside the rrweb replay iframe ———
@@ -195,12 +196,17 @@ function RrwebViewer({ step }: { step: CaptureStep }) {
 // Unlike DOM mode, these cannot be applied globally across steps because each
 // step has a different visual layout.
 
+const ZOOM_STEP = 0.25;
+const ZOOM_MIN = 0.25;
+const ZOOM_MAX = 4;
+
 function ImageViewer({ blobId, mimeType, step }: { blobId: string; mimeType: string; step: CaptureStep }) {
   const [buffer, setBuffer] = useState<ArrayBuffer | null>(null);
   const [loading, setLoading] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
   const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
   const [dragCurrent, setDragCurrent] = useState<{ x: number; y: number } | null>(null);
+  const [zoom, setZoom] = useState(1);
 
   const url = useObjectUrl(buffer, mimeType);
   const activeTool = useEditorStore((s) => s.activeTool);
@@ -280,6 +286,25 @@ function ImageViewer({ blobId, mimeType, step }: { blobId: string; mimeType: str
         }
       : null;
 
+  // Reset zoom when the image changes
+  useEffect(() => { setZoom(1); }, [blobId]);
+
+  const isSvg = mimeType === "image/svg+xml";
+
+  // Parse SVG viewBox dimensions to compute a CSS aspect-ratio for the <object> wrapper.
+  // <object> collapses to zero height without explicit dimensions; aspect-ratio fixes this.
+  const svgAspectRatio = React.useMemo(() => {
+    if (!isSvg || !buffer) return null;
+    const text = new TextDecoder().decode(new Uint8Array(buffer).subarray(0, 2000));
+    // viewBox="minX minY width height"
+    const vb = text.match(/viewBox=["'][^"']*?[\d.]+\s+[\d.]+\s+([\d.]+)\s+([\d.]+)["']/);
+    if (vb) return `${vb[1]} / ${vb[2]}`;
+    const w = text.match(/\bwidth=["']([\d.]+)["']/);
+    const h = text.match(/\bheight=["']([\d.]+)["']/);
+    if (w && h) return `${w[1]} / ${h[1]}`;
+    return "16 / 9";
+  }, [isSvg, buffer]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-48 text-sm text-gray-500 dark:text-gray-400 motion-safe:animate-pulse">
@@ -295,78 +320,125 @@ function ImageViewer({ blobId, mimeType, step }: { blobId: string; mimeType: str
     );
   }
 
-  const isSvg = mimeType === "image/svg+xml";
-
   return (
-    <div
-      ref={containerRef}
-      className="relative w-full select-none"
-      // Drag-to-redact is disabled for SVG — no pixel coordinates to operate on
-      style={{ cursor: !isSvg && activeTool ? "crosshair" : "default" }}
-      onMouseDown={!isSvg ? onMouseDown : undefined}
-      onMouseMove={!isSvg ? onMouseMove : undefined}
-      onMouseUp={!isSvg ? onMouseUp : undefined}
-      onMouseLeave={!isSvg ? () => { setDragStart(null); setDragCurrent(null); } : undefined}
-    >
-      {/* SVG: use <img> — preserves viewBox aspect ratio better than <object> */}
-      <img
-        src={url}
-        alt={isSvg ? "Captured SVG recording" : "Captured screenshot"}
-        className="w-full h-auto rounded block"
-        draggable={false}
-      />
-      {/* Region overlays — scoped to this step only, pixel recordings only */}
-      {!isSvg && (regionOps.length > 0 || liveRect) && (
-        <svg
-          className="absolute inset-0 w-full h-full pointer-events-none rounded"
-          viewBox="0 0 1 1"
-          preserveAspectRatio="none"
-        >
-          {regionOps.map((op) =>
-            op.region ? (
-              <rect
-                key={op.id}
-                x={op.region.x}
-                y={op.region.y}
-                width={op.region.w}
-                height={op.region.h}
-                fill={
-                  op.operationType === "blur"
-                    ? "rgba(59,130,246,0.45)"
-                    : op.redactColor
-                      ? `${op.redactColor}dd`
-                      : "rgba(0,0,0,0.88)"
-                }
-                stroke={
-                  op.operationType === "blur" ? "rgb(59,130,246)" : "rgb(239,68,68)"
-                }
-                strokeWidth="0.004"
-              />
-            ) : null
+    <div className="flex flex-col gap-2">
+      {/* Zoom controls — only for pixel recordings */}
+      {!isSvg && (
+        <div className="flex items-center gap-1.5 shrink-0">
+          <button
+            type="button"
+            onClick={() => setZoom((z) => Math.max(ZOOM_MIN, parseFloat((z - ZOOM_STEP).toFixed(2))))}
+            disabled={zoom <= ZOOM_MIN}
+            className="w-7 h-7 flex items-center justify-center rounded border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 transition-colors text-base leading-none cursor-pointer disabled:cursor-not-allowed"
+            aria-label="Zoom out"
+            title="Zoom out"
+          >−</button>
+          <span className="text-xs tabular-nums text-gray-600 dark:text-gray-400 w-10 text-center">
+            {Math.round(zoom * 100)}%
+          </span>
+          <button
+            type="button"
+            onClick={() => setZoom((z) => Math.min(ZOOM_MAX, parseFloat((z + ZOOM_STEP).toFixed(2))))}
+            disabled={zoom >= ZOOM_MAX}
+            className="w-7 h-7 flex items-center justify-center rounded border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 transition-colors text-base leading-none cursor-pointer disabled:cursor-not-allowed"
+            aria-label="Zoom in"
+            title="Zoom in"
+          >+</button>
+          {zoom !== 1 && (
+            <button
+              type="button"
+              onClick={() => setZoom(1)}
+              className="text-xs text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+            >
+              Reset
+            </button>
           )}
-          {liveRect && (
-            <rect
-              x={liveRect.x}
-              y={liveRect.y}
-              width={liveRect.w}
-              height={liveRect.h}
-              fill={
-                activeTool === "blur"
-                  ? "rgba(59,130,246,0.25)"
-                  : "rgba(0,0,0,0.45)"
-              }
-              stroke={activeTool === "blur" ? "rgb(59,130,246)" : "rgb(239,68,68)"}
-              strokeWidth="0.003"
-              strokeDasharray="0.012 0.006"
-            />
-          )}
-        </svg>
-      )}
-      {!isSvg && activeTool && !dragStart && (
-        <div className="absolute top-3 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-full shadow-lg select-none pointer-events-none whitespace-nowrap">
-          Drag to {activeTool === "blur" ? "blur" : "redact"} a region
         </div>
       )}
+
+      {/* Scroll viewport — only activates when zoomed */}
+      <div className={zoom > 1 ? "overflow-auto rounded" : ""}>
+        <div
+          ref={containerRef}
+          className="relative select-none"
+          style={{
+            width: zoom !== 1 ? `${zoom * 100}%` : "100%",
+            cursor: !isSvg && activeTool ? "crosshair" : "default",
+          }}
+          onMouseDown={!isSvg ? onMouseDown : undefined}
+          onMouseMove={!isSvg ? onMouseMove : undefined}
+          onMouseUp={!isSvg ? onMouseUp : undefined}
+          onMouseLeave={!isSvg ? () => { setDragStart(null); setDragCurrent(null); } : undefined}
+        >
+          {isSvg ? (
+            /* <object> loads SVG in a browsing context, allowing external <image> references
+               (logos, icons). <img> sandboxes SVG and silently blocks those resources. */
+            <div style={{ aspectRatio: svgAspectRatio ?? "16 / 9" }} className="w-full">
+              <object
+                data={url ?? undefined}
+                type="image/svg+xml"
+                className="w-full h-full rounded block"
+                aria-label="Captured SVG recording"
+              />
+            </div>
+          ) : (
+            <img
+              src={url}
+              alt="Captured screenshot"
+              className="w-full h-auto rounded block"
+              draggable={false}
+            />
+          )}
+          {/* Region overlays — scoped to this step only, pixel recordings only */}
+          {!isSvg && (regionOps.length > 0 || liveRect) && (
+            <svg
+              className="absolute inset-0 w-full h-full pointer-events-none rounded"
+              viewBox="0 0 1 1"
+              preserveAspectRatio="none"
+            >
+              {regionOps.map((op) =>
+                op.region ? (
+                  <rect
+                    key={op.id}
+                    x={op.region.x}
+                    y={op.region.y}
+                    width={op.region.w}
+                    height={op.region.h}
+                    fill={
+                      op.operationType === "blur"
+                        ? "rgba(59,130,246,0.45)"
+                        : op.redactColor
+                          ? `${op.redactColor}dd`
+                          : "rgba(0,0,0,0.88)"
+                    }
+                    stroke={
+                      op.operationType === "blur" ? "rgb(59,130,246)" : "rgb(239,68,68)"
+                    }
+                    strokeWidth="0.004"
+                  />
+                ) : null
+              )}
+              {liveRect && (
+                <rect
+                  x={liveRect.x}
+                  y={liveRect.y}
+                  width={liveRect.w}
+                  height={liveRect.h}
+                  fill={activeTool === "blur" ? "rgba(59,130,246,0.25)" : "rgba(0,0,0,0.45)"}
+                  stroke={activeTool === "blur" ? "rgb(59,130,246)" : "rgb(239,68,68)"}
+                  strokeWidth="0.003"
+                  strokeDasharray="0.012 0.006"
+                />
+              )}
+            </svg>
+          )}
+          {!isSvg && activeTool && !dragStart && (
+            <div className="absolute top-3 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-full shadow-lg select-none pointer-events-none whitespace-nowrap">
+              Drag to {activeTool === "blur" ? "blur" : "redact"} a region
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -409,9 +481,12 @@ function VideoViewer({ blobId }: { blobId: string }) {
 
 // ——— StepViewer ——————————————————————————————————————————————————————————
 
-export function StepViewer({ step }: StepViewerProps) {
+export function StepViewer({ step, onStepUpdated }: StepViewerProps) {
   const [fullStep, setFullStep] = useState<CaptureStep | null>(null);
   const [loading, setLoading] = useState(false);
+  const [editingLabel, setEditingLabel] = useState(false);
+  const [labelDraft, setLabelDraft] = useState("");
+  const labelInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!step) { setFullStep(null); return; }
@@ -421,6 +496,29 @@ export function StepViewer({ step }: StepViewerProps) {
       setLoading(false);
     });
   }, [step?.sessionId, step?.stepIndex]);
+
+  function startEditingLabel() {
+    if (!fullStep) return;
+    setLabelDraft(fullStep.pageTitle ?? "");
+    setEditingLabel(true);
+    setTimeout(() => labelInputRef.current?.select(), 0);
+  }
+
+  async function commitLabel() {
+    if (!fullStep) return;
+    setEditingLabel(false);
+    const trimmed = labelDraft.trim();
+    if (trimmed === fullStep.pageTitle) return;
+    await updateStepPageTitle(fullStep.sessionId, fullStep.stepIndex, trimmed);
+    const updated = { ...fullStep, pageTitle: trimmed };
+    setFullStep(updated);
+    onStepUpdated?.(updated);
+  }
+
+  function onLabelKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Enter") void commitLabel();
+    if (e.key === "Escape") { setLabelDraft(fullStep?.pageTitle ?? ""); setEditingLabel(false); }
+  }
 
   if (!step) {
     return (
@@ -450,13 +548,31 @@ export function StepViewer({ step }: StepViewerProps) {
       aria-label={`Step ${fullStep.stepIndex} preview`}
       className="flex flex-col h-full min-h-0"
     >
-      <div className="mb-3 shrink-0 flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-        <span className="font-medium text-gray-900 dark:text-gray-100">
+      <div className="mb-3 shrink-0 flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 min-w-0">
+        <span className="font-medium text-gray-900 dark:text-gray-100 shrink-0">
           Step {fullStep.stepIndex}
         </span>
-        {fullStep.pageTitle && <span>—</span>}
-        {fullStep.pageTitle && (
-          <span className="truncate">{fullStep.pageTitle}</span>
+        <span className="shrink-0">—</span>
+        {editingLabel ? (
+          <input
+            ref={labelInputRef}
+            type="text"
+            value={labelDraft}
+            onChange={(e) => setLabelDraft(e.target.value)}
+            onBlur={() => void commitLabel()}
+            onKeyDown={onLabelKeyDown}
+            className="flex-1 min-w-0 px-1.5 py-0.5 rounded border border-blue-400 dark:border-blue-500 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-400"
+            aria-label="Edit step label"
+          />
+        ) : (
+          <button
+            type="button"
+            onClick={startEditingLabel}
+            className="flex-1 min-w-0 text-left truncate hover:text-gray-900 dark:hover:text-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-blue-500 rounded cursor-text"
+            title="Click to edit label"
+          >
+            {fullStep.pageTitle || <span className="italic text-gray-400 dark:text-gray-500">Untitled</span>}
+          </button>
         )}
       </div>
 

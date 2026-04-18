@@ -75,10 +75,11 @@ chrome.runtime.onMessage.addListener(
 
       case "START_CAPTURE":
         void handleStartCapture(
-          msg.payload.mode, 
-          msg.payload.captureCursor, 
-          sender, 
-          sendResponse
+          msg.payload.mode,
+          msg.payload.captureCursor,
+          sender,
+          sendResponse,
+          msg.payload.imageFormat
         );
         return true;
 
@@ -127,7 +128,11 @@ chrome.runtime.onMessage.addListener(
             sessionId: string; url: string; pageTitle: string;
           };
           try {
-            const dataUrl = await chrome.tabs.captureVisibleTab({ format: "png" });
+            const session = await getSession(sessionId);
+            const fmt: "png" | "jpeg" = session?.imageFormat === "jpeg" ? "jpeg" : "png";
+            const captureOpts: chrome.tabs.CaptureVisibleTabOptions = { format: fmt };
+            if (fmt === "jpeg") captureOpts.quality = 92;
+            const dataUrl = await chrome.tabs.captureVisibleTab(captureOpts);
             // Decode base64 directly — fetch(data:...) violates connect-src 'self' CSP.
             const base64 = dataUrl.slice(dataUrl.indexOf(",") + 1);
             const binary = atob(base64);
@@ -137,9 +142,10 @@ chrome.runtime.onMessage.addListener(
             const blobId = crypto.randomUUID();
             await putBlob(blobId, buffer);
             const stepIndex = (await countStepsBySession(sessionId)) + 1;
+            const mimeType = fmt === "jpeg" ? "image/jpeg" : "image/png";
             const step: CaptureStep = {
               sessionId, stepIndex, timestamp: Date.now(),
-              url, pageTitle, blobId, mimeType: "image/png",
+              url, pageTitle, blobId, mimeType,
               rrwebEvents: null, actionStep: null, spotlightSelector: null,
             };
             await putStep(step);
@@ -217,7 +223,8 @@ async function handleStartCapture(
   mode: CaptureMode,
   captureCursor: boolean,
   sender: chrome.runtime.MessageSender,
-  sendResponse: (r: any) => void
+  sendResponse: (r: any) => void,
+  imageFormat?: "png" | "jpeg"
 ): Promise<void> {
   let targetTabId = sender.tab?.id;
   
@@ -250,6 +257,7 @@ async function handleStartCapture(
     stepCount: 0,
     captureCursor,
     hostnames: [],
+    ...(mode === "image-chain" ? { imageFormat: imageFormat ?? "png" } : {}),
   };
   await putSession(session);
 

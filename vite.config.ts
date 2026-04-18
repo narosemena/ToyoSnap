@@ -87,5 +87,31 @@ export default defineConfig({
   test: {
     // Exclude worktrees so vitest doesn't double-run tests from git worktrees
     exclude: [".worktrees/**", "node_modules/**"],
+    coverage: {
+      provider: "v8",
+      reporter: ["text", "json", "html"],
+      // Scope to pure-logic directories only. React components, the service
+      // worker, and Chrome extension APIs require Playwright e2e tests, not
+      // unit tests — including them here produces misleading 0% numbers.
+      include: [
+        "src/security/**",
+        "src/ledger/**",
+        "src/storage/**",
+        "src/lib/**",
+      ],
+      exclude: [
+        "node_modules/**",
+        "dist/**",
+        ".worktrees/**",
+        "tests/**",
+      ],
+      thresholds: {
+        "src/security/**": { lines: 80 },
+        "src/ledger/**": { lines: 80 },
+        "src/storage/**": { lines: 80 },
+        "src/lib/json-guard.ts": { lines: 90 },
+        "src/lib/message-validator.ts": { lines: 90 },
+      },
+    },
   },
 });

@@ -19,33 +19,40 @@ function loadImage(url: string): Promise<HTMLImageElement> {
   });
 }
 
-function canvasToPngBuffer(canvas: HTMLCanvasElement): Promise<ArrayBuffer> {
+function canvasToBuffer(
+  canvas: HTMLCanvasElement,
+  format: "png" | "jpeg",
+  quality = 0.92
+): Promise<ArrayBuffer> {
   return new Promise((resolve, reject) => {
-    canvas.toBlob((blob) => {
-      if (!blob) { reject(new Error("canvas.toBlob returned null")); return; }
-      blob.arrayBuffer().then(resolve, reject);
-    }, "image/png");
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) { reject(new Error("canvas.toBlob returned null")); return; }
+        blob.arrayBuffer().then(resolve, reject);
+      },
+      format === "jpeg" ? "image/jpeg" : "image/png",
+      format === "jpeg" ? quality : undefined
+    );
   });
 }
 
-/** Returns PNG ArrayBuffer with overlays baked in, or raw buffer if no overlays. */
-export async function compositeStepToPng(
+async function compositeStep(
   step: CaptureStep,
-  allOps: LedgerEntry[]
+  allOps: LedgerEntry[],
+  outputFormat: "png" | "jpeg"
 ): Promise<ArrayBuffer | null> {
   if (!step.blobId) return null;
   const rawBuffer = await getBlob(step.blobId);
   if (!rawBuffer) return null;
 
-  // Region ops scoped to this step
   const regionOps = allOps.filter(
     (op) => op.region && (op.stepIndex == null || op.stepIndex === step.stepIndex)
   );
 
   if (regionOps.length === 0) return rawBuffer;
 
-  const mimeType = step.mimeType === "image/svg+xml" ? "image/svg+xml" : "image/png";
-  const objectUrl = URL.createObjectURL(new Blob([rawBuffer], { type: mimeType }));
+  const srcMime = step.mimeType ?? "image/png";
+  const objectUrl = URL.createObjectURL(new Blob([rawBuffer], { type: srcMime }));
   try {
     const img = await loadImage(objectUrl);
     const W = img.naturalWidth || 1920;
@@ -66,7 +73,6 @@ export async function compositeStepToPng(
 
       if (op.operationType === "blur") {
         const radius = op.blurRadius ?? 8;
-        // Render blurred copy of region on an offscreen canvas, then stamp back
         const tmp = document.createElement("canvas");
         tmp.width = rw;
         tmp.height = rh;
@@ -80,10 +86,26 @@ export async function compositeStepToPng(
       }
     }
 
-    return canvasToPngBuffer(canvas);
+    return canvasToBuffer(canvas, outputFormat);
   } finally {
     URL.revokeObjectURL(objectUrl);
   }
+}
+
+/** Returns PNG ArrayBuffer with overlays baked in, or raw buffer if no overlays. */
+export function compositeStepToPng(
+  step: CaptureStep,
+  allOps: LedgerEntry[]
+): Promise<ArrayBuffer | null> {
+  return compositeStep(step, allOps, "png");
+}
+
+/** Returns JPEG ArrayBuffer with overlays baked in (always re-encodes via canvas). */
+export function compositeStepToJpeg(
+  step: CaptureStep,
+  allOps: LedgerEntry[]
+): Promise<ArrayBuffer | null> {
+  return compositeStep(step, allOps, "jpeg");
 }
 
 /**

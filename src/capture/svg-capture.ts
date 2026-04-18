@@ -30,6 +30,8 @@ export class SvgCapture implements BaseCapture {
   async start(): Promise<void> {
     this.clickHandler = (e: MouseEvent) => void this.onUserClick(e);
     document.addEventListener("click", this.clickHandler, { capture: true, passive: true });
+    // Capture initial DOM state so step 1 always exists
+    setTimeout(() => void this.captureCurrentState(), 0);
   }
 
   async stop(): Promise<void> {

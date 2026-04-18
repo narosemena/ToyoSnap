@@ -100,6 +100,18 @@ export async function countStepsBySession(sessionId: string): Promise<number> {
   return steps.length;
 }
 
+/** Patches only the pageTitle of a stored step without re-encrypting rrweb data. */
+export async function updateStepPageTitle(
+  sessionId: string,
+  stepIndex: number,
+  pageTitle: string
+): Promise<void> {
+  const db = await getDB();
+  const step = await db.get("steps", [sessionId, stepIndex]);
+  if (!step) return;
+  await db.put("steps", { ...step, pageTitle });
+}
+
 // â"€â"€ Blobs (encrypted at rest) â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 
 export async function putBlob(blobId: string, data: ArrayBuffer): Promise<void> {

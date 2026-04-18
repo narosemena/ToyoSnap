@@ -1,9 +1,9 @@
 import type { CaptureMode, ActionStep } from "./capture";
 
 export type ExtensionMessage =
-  | { type: "START_CAPTURE"; payload: { mode: CaptureMode; captureCursor: boolean } }
+  | { type: "START_CAPTURE"; payload: { mode: CaptureMode; captureCursor: boolean; imageFormat?: "png" | "jpeg" } }
   | { type: "STOP_CAPTURE" }
-  | { type: "BEGIN_CAPTURE"; payload: { sessionId: string; mode: CaptureMode; captureCursor: boolean } }
+  | { type: "BEGIN_CAPTURE"; payload: { sessionId: string; mode: CaptureMode; captureCursor: boolean; imageFormat?: "png" | "jpeg" } }
   | { type: "RESUME_CAPTURE"; payload: { sessionId: string; captureMode: CaptureMode; captureCursor: boolean } }
   | { type: "END_CAPTURE" }
   | { type: "CAPTURE_STEP"; payload: { actionStep: ActionStep } }

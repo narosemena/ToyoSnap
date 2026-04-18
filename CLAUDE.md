@@ -49,10 +49,24 @@ ToyoSnap/
 │   ├── fixtures/                 ← extension-fixture.ts, test-pages/
 │   ├── security/                 ← permission-scope, message-injection, xss-prevention, …
 │   ├── e2e/                      ← zero-egress, accessibility, capture-*, pii-studio, …
-│   └── unit/                     ← contrast, json-guard, ledger-resolver, markdown-builder, …
+│   ├── unit/                     ← contrast, json-guard, ledger-resolver, markdown-builder, …
+│   ├── contract/                 ← NEW — export format validation (opens in target app)
+│   ├── perf/                     ← NEW — performance regression budgets (warning-only)
+│   └── a11y/                     ← NEW — accessibility assertions (axe)
+├── templates/                    ← NEW — user testing templates
+│   ├── TESTER-BRIEF.md
+│   ├── OBSERVATION-LOG.md
+│   ├── FEEDBACK-FORM.md
+│   └── FIX-TICKET.md
+├── scripts/
+│   └── generate-audit-package.sh ← NEW — InfoSec evidence package generator
 ├── public/icons/                 ← 16/32/48/128 PNGs
 └── docs/
-    └── ARCHITECTURE.md
+    ├── ARCHITECTURE.md
+    ├── TEST-STRATEGY.md          ← NEW — master test plan
+    ├── REGRESSION-TEST-CASES.md  ← NEW — all test cases by invariant/capability
+    ├── USER-TESTING-PROTOCOL.md  ← NEW — L&D user testing rounds
+    └── INFOSEC-EVIDENCE-PACKAGE.md ← NEW — enterprise audit readiness checklist
 ```
 
 `dist/` is git-ignored (build output).
@@ -128,6 +142,9 @@ npm run test:security        # Playwright security suite — MUST pass before al
 npm run test:unit            # Vitest unit tests
 npm run test:e2e             # Playwright e2e (requires headed Chromium — see CI/CD below)
 npm run test:a11y            # axe-core accessibility scan against editor.html + popup.html
+npm run test:contract        # Vitest — export format validation (each format opens in target app)
+npm run test:fuzz            # Vitest + fast-check — property-based security tests (1000+ runs)
+npm run test:perf            # Playwright — performance budgets (warning-only, trend-tracked)
 npm run test                 # runs all of the above in order, gates on security first
 ```
 
@@ -148,8 +165,78 @@ npm run test                 # runs all of the above in order, gates on security
 | Unit | Vitest | `npm run test:unit` | Pure functions, no browser context needed |
 | Accessibility | axe + Playwright | `npm run test:a11y` | Requires headed Chromium |
 | E2E | Playwright | `npm run test:e2e` | Requires headed Chromium; `headless: false` always |
+| Contract | Vitest | `npm run test:contract` | Each export format opens and parses in its target app |
+| Fuzz | Vitest + fast-check | `npm run test:fuzz` | 1000+ property-based runs on security validators |
+| Performance | Playwright | `npm run test:perf` | Warning-only budget checks; trend-tracked, does not block |
 
 Extension tests **cannot run headless** — Chrome does not load extensions in headless mode. In CI, use `xvfb-run`.
+
+---
+
+## Testing Protocol (for AI assistants)
+
+This project has a formal test strategy. See `docs/TEST-STRATEGY.md` for the full picture.
+
+### When you fix a bug
+
+1. Read the fix ticket (usually in `/issues/` or linked from the PR description).
+2. Reproduce the bug locally before writing code.
+3. **Write a failing regression test first.** Location:
+   - Security bug → `tests/security/`
+   - Validator / pure logic bug → `tests/unit/`
+   - User-visible flow bug → `tests/e2e/`
+   - Export format bug → `tests/contract/` (create if missing)
+4. Confirm the new test fails.
+5. Fix the code.
+6. Confirm the new test passes AND `npm run test` is green end-to-end.
+7. Commit the test + fix together in the same PR.
+
+**Do not merge a fix without a regression test covering it.** Every bug fixed without a test is a bug that will come back.
+
+### When you add a feature
+
+1. Extend the corresponding test suite for the user-visible capability (Section B of `docs/REGRESSION-TEST-CASES.md`).
+2. If the feature touches a security invariant, extend the security suite too.
+3. If the feature adds a new export format, add a contract test in `tests/contract/`.
+4. If the feature changes the UI, rerun `npm run test:a11y` and address any new violations.
+
+### When you refactor
+
+1. Do NOT change test behavior and production code in the same PR unless the refactor is the test itself.
+2. If a test starts failing during a refactor, pause and ask the human whether the test was wrong or the refactor broke something real.
+3. Never silence a test by skipping it or loosening its assertion to get a green build.
+
+### Coverage thresholds (must not regress)
+
+`src/security/` — 80% line coverage
+`src/ledger/` — 80% line coverage
+`src/storage/` — 80% line coverage
+`src/lib/json-guard.ts` — 90% line coverage
+`src/lib/message-validator.ts` — 90% line coverage
+Everything else — 60% line coverage
+
+Enforced via Vitest `coverage.thresholds` in `vitest.config.ts`.
+
+### End-user testing
+
+End-user testing is a separate track with humans. You do not run it. If a bug comes to you from user testing, it will arrive as a fix ticket using `templates/FIX-TICKET.md`. Treat that as authoritative scope; do not expand it.
+
+### What you must never do
+
+- Skip or `.only()` a test to ship faster
+- Mock a security boundary in a way that bypasses real validation in production
+- Remove a test because it is "flaky" without a documented root cause
+- Use `innerHTML` (still and always)
+- Add any network egress (still and always)
+- Change the triage severity on a fix ticket
+
+### What to tell the human
+
+At the end of every task, report:
+- Which tests you added, and what bug each covers
+- Which tests you ran, and their results
+- Any security invariants this work touched, and how you verified they held
+- Any assumptions you made that the human should sanity-check
 
 ---
 
@@ -207,7 +294,6 @@ Recommended GitHub Actions pipeline (each step gates the next):
 
 ## Corporate Policy Notes
 
-- `policies.txt` **must be deleted** from the `main` branch — it reproduces Corporate policy text verbatim, which violates Section 5 of that document.
 - `dompurify` has a dual Apache-2.0 / MPL-2.0 license — escalate to Corporate legal before shipping.
 - Submit the Corporate GenAI Intake entry (see `GENAI-DISCLOSURE.md`) before migrating to Corporate source control.
 

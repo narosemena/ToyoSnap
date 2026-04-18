@@ -1,12 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { useEditorStore } from "@/editor/store/editor-store";
 import { ExportSensitivityWarning } from "./ExportSensitivityWarning";
-import { exportPptx } from "@/export-engine/pptx-exporter";
 import { exportPngZip } from "@/export-engine/png-zip-exporter";
-import { exportBmpZip } from "@/export-engine/bmp-zip-exporter";
+import { exportJpegZip } from "@/export-engine/jpeg-zip-exporter";
 import { exportSvgZip } from "@/export-engine/svg-zip-exporter";
 import { getSession } from "@/storage/ephemeral-db";
-import type { CaptureMode } from "@/types/capture";
+import type { CaptureMode, CaptureSession } from "@/types/capture";
 
 interface ExportFormat {
   id: string;
@@ -14,31 +13,29 @@ interface ExportFormat {
   description: string;
   ext: string;
   run: (sessionId: string) => Promise<Blob>;
-  /** If set, only show when session mode matches */
   onlyForMode?: CaptureMode;
+  /** If set, only show for image-chain when imageFormat matches */
+  onlyForImageFormat?: "png" | "jpeg";
 }
 
 const FORMATS: ExportFormat[] = [
   {
     id: "png",
     label: "PNG Screenshots",
-    description: "ZIP of step images with PII overlays baked in",
+    description: "ZIP of lossless PNG images with PII overlays baked in",
     ext: "zip",
     run: exportPngZip,
+    onlyForMode: "image-chain",
+    onlyForImageFormat: "png",
   },
   {
-    id: "bmp",
-    label: "BMP Screenshots",
-    description: "ZIP of 24-bit BMP images with PII overlays baked in",
+    id: "jpeg",
+    label: "JPEG Screenshots",
+    description: "ZIP of compressed JPEG images with PII overlays baked in",
     ext: "zip",
-    run: exportBmpZip,
-  },
-  {
-    id: "pptx",
-    label: "PowerPoint",
-    description: "One slide per step with PII overlays baked in",
-    ext: "pptx",
-    run: exportPptx,
+    run: exportJpegZip,
+    onlyForMode: "image-chain",
+    onlyForImageFormat: "jpeg",
   },
   {
     id: "svg",
@@ -64,11 +61,11 @@ export function ExportPanel() {
   const [pendingFormat, setPendingFormat] = useState<ExportFormat | null>(null);
   const [exportingId, setExportingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [sessionMode, setSessionMode] = useState<CaptureMode | null>(null);
+  const [session, setSession] = useState<CaptureSession | null>(null);
 
   useEffect(() => {
-    if (!activeSessionId) { setSessionMode(null); return; }
-    void getSession(activeSessionId).then((s) => setSessionMode(s?.mode ?? null));
+    if (!activeSessionId) { setSession(null); return; }
+    void getSession(activeSessionId).then((s) => setSession(s ?? null));
   }, [activeSessionId]);
 
   if (!activeSessionId) {
@@ -79,9 +76,11 @@ export function ExportPanel() {
     );
   }
 
-  const visibleFormats = FORMATS.filter(
-    (fmt) => !fmt.onlyForMode || fmt.onlyForMode === sessionMode
-  );
+  const visibleFormats = FORMATS.filter((fmt) => {
+    if (fmt.onlyForMode && fmt.onlyForMode !== session?.mode) return false;
+    if (fmt.onlyForImageFormat && fmt.onlyForImageFormat !== (session?.imageFormat ?? "png")) return false;
+    return true;
+  });
 
   async function runExport(format: ExportFormat) {
     if (!activeSessionId) return;
