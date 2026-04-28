@@ -1,0 +1,82 @@
+name: Beta Feedback
+description: Report a bug or share feedback during the ToyoSnap beta program
+labels: ["beta-feedback"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for testing ToyoSnap! Please fill in as much detail as you can — it helps us triage quickly.
+
+  - type: input
+    id: extension-version
+    attributes:
+      label: Extension version
+      description: Copy this from the bottom of the ToyoSnap popup (e.g. `v0.1.0 · abc1234`)
+      placeholder: "v0.1.0 · abc1234"
+    validations:
+      required: true
+
+  - type: input
+    id: chrome-version
+    attributes:
+      label: Chrome version
+      description: Found at chrome://settings/help
+      placeholder: "e.g. 124.0.6367.82"
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      placeholder: "e.g. Windows 11, macOS 14.4, Ubuntu 22.04"
+    validations:
+      required: true
+
+  - type: input
+    id: page-url
+    attributes:
+      label: Page where the issue occurred
+      description: You can redact any sensitive parts — domain + path is enough (e.g. `https://example.com/form`)
+      placeholder: "https://..."
+    validations:
+      required: false
+
+  - type: dropdown
+    id: capture-mode
+    attributes:
+      label: Capture mode in use
+      options:
+        - rrweb (DOM replay)
+        - Screenshot chain (PNG)
+        - Not applicable / don't know
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Describe the exact steps you took and what went wrong.
+      placeholder: |
+        1. Opened the extension popup
+        2. Clicked Start Recording
+        3. Navigated to the form
+        4. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect to happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
+      description: Screenshots, console errors, export file names, etc.
+    validations:
+      required: false

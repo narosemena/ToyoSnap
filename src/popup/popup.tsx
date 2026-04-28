@@ -89,6 +89,15 @@ function Popup() {
       >
         Open Vault & Editor
       </button>
+
+      <button
+        type="button"
+        title="Click to copy build info"
+        onClick={() => void navigator.clipboard.writeText(`v${__APP_VERSION__} · ${__BUILD_HASH__}`)}
+        className="text-xs text-center text-gray-400 dark:text-gray-600 mt-1 hover:text-gray-600 dark:hover:text-gray-400 cursor-pointer select-none"
+      >
+        v{__APP_VERSION__} · {__BUILD_HASH__}
+      </button>
     </div>
   );
 }

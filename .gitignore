@@ -6,3 +6,9 @@ playwright-report/
 .env
 .DS_Store
 .worktrees/
+web-ext-artifacts/
+*.pem
+*.zip
+*.crx
+sbom.json
+licenses.json

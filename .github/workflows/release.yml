@@ -1,0 +1,82 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  release:
+    name: Build · Package · Draft Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      # --- Static analysis ---
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint (ESLint + eslint-plugin-security)
+        run: npm run lint
+
+      # --- Build ---
+
+      - name: Build extension
+        run: npm run build
+
+      # --- Verify no source maps shipped (mirrors ci.yml guard) ---
+
+      - name: Assert no .map files in dist/
+        run: |
+          mapfiles=$(find dist/ -name "*.map" 2>/dev/null || true)
+          if [ -n "$mapfiles" ]; then
+            echo "ERROR: source maps found in dist/ — aborting release:"
+            echo "$mapfiles"
+            exit 1
+          fi
+          echo "OK: no .map files in dist/"
+
+      # --- Compliance artifacts ---
+
+      - name: Generate SBOM
+        run: npm run sbom
+
+      - name: Generate OSS license inventory
+        run: npm run licenses
+
+      # --- Package ---
+
+      - name: Package extension zip
+        run: npm run package
+
+      - name: Compute SHA-256 checksums
+        run: |
+          VERSION="${GITHUB_REF_NAME}"
+          ZIP="web-ext-artifacts/toyosnap-${VERSION#v}.zip"
+          sha256sum "$ZIP" sbom.json licenses.json > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      # --- Draft GitHub Release ---
+
+      - name: Create draft release
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          generate_release_notes: false
+          files: |
+            web-ext-artifacts/*.zip
+            sbom.json
+            licenses.json
+            SHA256SUMS.txt
