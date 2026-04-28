@@ -1,11 +1,12 @@
 import React, { useEffect, useRef, useState } from "react";
-import type { CaptureStep } from "@/types/capture";
+import type { CaptureStep, CaptureMode } from "@/types/capture";
 import { getBlob, getStep } from "@/storage/ephemeral-db";
 import rrwebPlayer, { type RRwebPlayerOptions } from "rrweb-player";
 import "rrweb-player/dist/style.css";
 
 interface StepViewerProps {
   step: CaptureStep | null;
+  sessionMode?: CaptureMode;
 }
 
 function useObjectUrl(buffer: ArrayBuffer | null, mimeType: string): string | null {
@@ -110,7 +111,7 @@ function BlobViewer({ blobId, mimeType, tag }: { blobId: string; mimeType: strin
   );
 }
 
-export function StepViewer({ step }: StepViewerProps) {
+export function StepViewer({ step, sessionMode }: StepViewerProps) {
   // getStepsBySession returns steps with rrwebEvents: null (encrypted separately).
   // Load the full step with decrypted events whenever the selection changes.
   const [fullStep, setFullStep] = useState<CaptureStep | null>(null);
@@ -141,13 +142,14 @@ export function StepViewer({ step }: StepViewerProps) {
     );
   }
 
-  // Determine mode from step content
   const hasRrweb = Boolean(fullStep.rrwebEvents?.length);
   const hasBlob = Boolean(fullStep.blobId);
-
-  // video mode: blob with no actionStep and no rrweb events (long recording)
-  // image-chain / svg: blob with actionStep
   const isVideo = hasBlob && !hasRrweb && !fullStep.actionStep;
+  const blobMimeType = isVideo
+    ? "video/webm"
+    : sessionMode === "svg"
+      ? "image/svg+xml"
+      : "image/png";
 
   return (
     <section aria-label={`Step ${fullStep.stepIndex} preview`} className="w-full">
@@ -164,7 +166,7 @@ export function StepViewer({ step }: StepViewerProps) {
       {!hasRrweb && hasBlob && fullStep.blobId && (
         <BlobViewer
           blobId={fullStep.blobId}
-          mimeType={isVideo ? "video/webm" : "image/png"}
+          mimeType={blobMimeType}
           tag={isVideo ? "video" : "img"}
         />
       )}

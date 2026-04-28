@@ -1,9 +1,70 @@
-/**
- * SVG DOM capture mode.
- * Converts the live DOM to SVG using dom-to-svg, then extracts 4 named layers.
- */
-import { documentToSVG } from "dom-to-svg";
 import type { BaseCapture } from "./base-capture";
+import type { SvgTextElement } from "@/types/capture";
+
+const CAPTURABLE_SELECTORS = [
+  'input:not([type="hidden"]):not([type="password"]):not([type="checkbox"]):not([type="radio"])',
+  "textarea",
+  "select",
+  "label",
+  "h1", "h2", "h3", "h4", "h5", "h6",
+  "button",
+].join(", ");
+
+function isInViewport(rect: DOMRect): boolean {
+  return (
+    rect.bottom > 0 &&
+    rect.right > 0 &&
+    rect.top < window.innerHeight &&
+    rect.left < window.innerWidth &&
+    rect.width > 0 &&
+    rect.height > 0
+  );
+}
+
+function getElementText(el: Element): string {
+  if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
+    return el.value;
+  }
+  if (el instanceof HTMLSelectElement) {
+    return el.options[el.selectedIndex]?.text ?? "";
+  }
+  return (el.textContent ?? "").replace(/\s+/g, " ").trim();
+}
+
+function extractTextElements(): SvgTextElement[] {
+  const elements = document.querySelectorAll(CAPTURABLE_SELECTORS);
+  const result: SvgTextElement[] = [];
+
+  for (const el of elements) {
+    const rect = el.getBoundingClientRect();
+    if (!isInViewport(rect)) continue;
+
+    const text = getElementText(el).slice(0, 120);
+    if (!text) continue;
+
+    const style = window.getComputedStyle(el);
+    if (style.display === "none" || style.visibility === "hidden" || style.opacity === "0") continue;
+
+    const fontFamily = style.fontFamily.split(",")[0].replace(/['"]/g, "").trim() || "sans-serif";
+    const fontSize = parseFloat(style.fontSize) || 14;
+
+    result.push({
+      x: Math.round(rect.left),
+      // baseline ≈ 75% from top — works for single-line inputs, labels, and headings
+      y: Math.round(rect.top + rect.height * 0.75),
+      width: Math.round(rect.width),
+      height: Math.round(rect.height),
+      text,
+      fontFamily,
+      fontSize,
+      fontWeight: style.fontWeight,
+      color: style.color,
+      tag: el.tagName.toLowerCase(),
+    });
+  }
+
+  return result;
+}
 
 export class SvgCapture implements BaseCapture {
   private sessionId: string;
@@ -26,36 +87,17 @@ export class SvgCapture implements BaseCapture {
   }
 
   private async onUserClick(_e: MouseEvent): Promise<void> {
-    const svgDocument = documentToSVG(document);
-    const svgElement = svgDocument.documentElement as unknown as SVGElement;
-
-    // Extract 4 named layers
-    await this.addLayers(svgElement);
-
-    const serialized = new XMLSerializer().serializeToString(svgDocument);
-    const bytes = new TextEncoder().encode(serialized);
-    const base64 = btoa(String.fromCharCode(...bytes));
-
     await chrome.runtime.sendMessage({
-      type: "STORE_BLOB_STEP",
+      type: "CAPTURE_SVG_STEP",
       payload: {
         sessionId: this.sessionId,
         url: location.href,
         pageTitle: document.title,
-        base64,
-        mimeType: "image/svg+xml",
+        viewportWidth: window.innerWidth,
+        viewportHeight: window.innerHeight,
+        textElements: extractTextElements(),
       },
     });
-  }
-
-  private async addLayers(svgEl: SVGElement): Promise<void> {
-    const layers = ["background", "content", "interactive", "annotations"];
-    for (const layerName of layers) {
-      const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
-      g.setAttribute("id", `toyosnap-layer-${layerName}`);
-      g.setAttribute("data-layer", layerName);
-      svgEl.appendChild(g);
-    }
   }
 
   async captureStep(_stepIndex: number): Promise<void> {

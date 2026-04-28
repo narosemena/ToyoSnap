@@ -21,7 +21,6 @@
   },
   "dependencies": {
     "docx": "9.6.1",
-    "dom-to-svg": "0.12.2",
     "dompurify": "^3.0.0",
     "idb": "8.0.3",
     "immer": "11.1.4",

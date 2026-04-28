@@ -4,7 +4,7 @@ import { useEditorStore } from "./store/editor-store";
 import { usePIIStore } from "./store/pii-store";
 import { getAllSessions, getStepsBySession } from "@/storage/ephemeral-db";
 import { getAllGlobalLedgerEntries } from "@/storage/ephemeral-db";
-import type { CaptureStep } from "@/types/capture";
+import type { CaptureStep, CaptureMode } from "@/types/capture";
 import { LiveAnnouncer } from "./components/LiveAnnouncer";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { SkeletonStep } from "./components/SkeletonStep";
@@ -27,6 +27,7 @@ function Editor() {
   const { loadOperations } = usePIIStore();
   const [sessions, setSessions] = React.useState<Awaited<ReturnType<typeof getAllSessions>>>([]);
   const [steps, setSteps] = React.useState<CaptureStep[]>([]);
+  const sessionMode = (sessions.find((s) => s.id === activeSessionId)?.mode ?? undefined) as CaptureMode | undefined;
   const [showExportWarning, setShowExportWarning] = React.useState(false);
   const [rightTab, setRightTab] = React.useState<RightPanelTab>("pii");
 
@@ -160,7 +161,7 @@ function Editor() {
             <ErrorBoundary name="main-content">
               {/* Timeline strip */}
               <div className="border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
-                <StepTimeline steps={steps} />
+                <StepTimeline steps={steps} sessionMode={sessionMode} />
               </div>
 
               {/* Step viewer + right panel */}
@@ -169,6 +170,7 @@ function Editor() {
                 <section className="flex-1 overflow-auto p-4 min-w-0">
                   <StepViewer
                     step={steps.find((s) => s.stepIndex === activeStepIndex) ?? steps[0] ?? null}
+                    sessionMode={sessionMode}
                   />
                 </section>
 

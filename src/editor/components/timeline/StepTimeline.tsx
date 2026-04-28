@@ -7,6 +7,7 @@ interface StepTimelineProps {
   steps: CaptureStep[];
   /** stepIndex values that have local PII overrides */
   overriddenSteps?: Set<number>;
+  sessionMode?: CaptureMode;
 }
 
 const MODE_LABELS: Record<CaptureMode, string> = {
@@ -28,13 +29,15 @@ function StepThumbnail({
   isActive,
   hasOverride,
   onClick,
+  sessionMode,
 }: {
   step: CaptureStep;
   isActive: boolean;
   hasOverride: boolean;
   onClick: () => void;
+  sessionMode?: CaptureMode;
 }) {
-  const mode: CaptureMode = (step.actionStep ? "rrweb" : step.blobId ? "image-chain" : "rrweb");
+  const mode: CaptureMode = sessionMode ?? (step.rrwebEvents?.length ? "rrweb" : step.blobId ? "image-chain" : "rrweb");
 
   return (
     <button
@@ -74,7 +77,7 @@ function StepThumbnail({
   );
 }
 
-export function StepTimeline({ steps, overriddenSteps = new Set() }: StepTimelineProps) {
+export function StepTimeline({ steps, overriddenSteps = new Set(), sessionMode }: StepTimelineProps) {
   const { activeStepIndex, setActiveStep } = useEditorStore();
   const activeRef = useRef<HTMLLIElement>(null);
 
@@ -107,6 +110,7 @@ export function StepTimeline({ steps, overriddenSteps = new Set() }: StepTimelin
                 isActive={isActive}
                 hasOverride={overriddenSteps.has(step.stepIndex)}
                 onClick={() => setActiveStep(step.stepIndex)}
+                sessionMode={sessionMode}
               />
             </li>
           );

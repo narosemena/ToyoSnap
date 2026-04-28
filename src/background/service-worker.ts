@@ -22,8 +22,59 @@ import {
   getStepsBySession,
 } from "@/storage/ephemeral-db";
 import type { ExtensionMessage } from "@/types/messages";
-import type { CaptureSession, CaptureMode, CaptureStep } from "@/types/capture";
+import type { CaptureSession, CaptureMode, CaptureStep, SvgTextElement } from "@/types/capture";
 import type { DesignSystem } from "@/types/design-system";
+
+// —— SVG helpers ————————————————————————————————————————————————————————————
+
+function escapeXml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
+function buildHybridSvg(
+  pngDataUrl: string,
+  w: number,
+  h: number,
+  pageTitle: string,
+  textElements: SvgTextElement[]
+): string {
+  const textNodes = textElements
+    .map((el) => {
+      const txt = escapeXml(el.text);
+      if (!txt) return "";
+      return (
+        `    <text` +
+        ` x="${el.x}" y="${el.y}"` +
+        ` font-family="${escapeXml(el.fontFamily)}"` +
+        ` font-size="${el.fontSize}"` +
+        ` font-weight="${escapeXml(el.fontWeight)}"` +
+        ` fill="${escapeXml(el.color)}"` +
+        ` data-toyosnap-tag="${el.tag}"` +
+        `>${txt}</text>`
+      );
+    })
+    .filter(Boolean)
+    .join("\n");
+
+  return (
+    `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"` +
+    ` width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">\n` +
+    `  <title>${escapeXml(pageTitle)}</title>\n` +
+    `  <g id="toyosnap-layer-background">\n` +
+    `    <image href="${pngDataUrl}" x="0" y="0" width="${w}" height="${h}"` +
+    ` preserveAspectRatio="xMidYMid meet"/>\n` +
+    `  </g>\n` +
+    `  <g id="toyosnap-layer-text">\n` +
+    `${textNodes}\n` +
+    `  </g>\n` +
+    `</svg>`
+  );
+}
 
 // —— Initialization —————————————————————————————————————————————————————————
 
@@ -130,6 +181,37 @@ chrome.runtime.onMessage.addListener(
             const dataUrl = await chrome.tabs.captureVisibleTab({ format: "png" });
             const response = await fetch(dataUrl);
             const buffer = await response.arrayBuffer();
+            const blobId = crypto.randomUUID();
+            await putBlob(blobId, buffer);
+            const stepIndex = (await countStepsBySession(sessionId)) + 1;
+            const step: CaptureStep = {
+              sessionId, stepIndex, timestamp: Date.now(),
+              url, pageTitle, blobId, rrwebEvents: null, actionStep: null, spotlightSelector: null,
+            };
+            await putStep(step);
+            sendResponse({ ok: true });
+          } catch (err) {
+            sendResponse({ error: String(err) });
+          }
+        })();
+        return true;
+      }
+
+      case "CAPTURE_SVG_STEP": {
+        void (async () => {
+          const { sessionId, url, pageTitle, viewportWidth, viewportHeight, textElements } =
+            msg.payload as {
+              sessionId: string;
+              url: string;
+              pageTitle: string;
+              viewportWidth: number;
+              viewportHeight: number;
+              textElements: SvgTextElement[];
+            };
+          try {
+            const pngDataUrl = await chrome.tabs.captureVisibleTab({ format: "png" });
+            const svgString = buildHybridSvg(pngDataUrl, viewportWidth, viewportHeight, pageTitle, textElements);
+            const buffer = new TextEncoder().encode(svgString).buffer;
             const blobId = crypto.randomUUID();
             await putBlob(blobId, buffer);
             const stepIndex = (await countStepsBySession(sessionId)) + 1;
