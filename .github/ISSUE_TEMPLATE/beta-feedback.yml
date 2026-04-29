@@ -43,12 +43,28 @@ body:
       required: false
 
   - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      description: "Blocker = Zero-Egress violated / data loss / extension fails to load. Major = documented feature does not work. Minor = annoying but workable. Cosmetic = visual only."
+      options:
+        - Blocker
+        - Major
+        - Minor
+        - Cosmetic
+        - Not sure
+    validations:
+      required: true
+
+  - type: dropdown
     id: capture-mode
     attributes:
       label: Capture mode in use
       options:
-        - rrweb (DOM replay)
-        - Screenshot chain (PNG)
+        - DOM Replay (rrweb)
+        - Screenshot Chain (PNG)
+        - Video (WebM)
+        - SVG Layers
         - Not applicable / don't know
     validations:
       required: true
