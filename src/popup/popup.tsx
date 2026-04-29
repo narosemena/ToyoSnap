@@ -94,7 +94,7 @@ function Popup() {
         type="button"
         title="Click to copy build info"
         onClick={() => void navigator.clipboard.writeText(`v${__APP_VERSION__} · ${__BUILD_HASH__}`)}
-        className="text-xs text-center text-gray-400 dark:text-gray-600 mt-1 hover:text-gray-600 dark:hover:text-gray-400 cursor-pointer select-none"
+        className="text-xs text-center text-gray-600 dark:text-gray-400 mt-1 hover:opacity-70 cursor-pointer select-none"
       >
         v{__APP_VERSION__} · {__BUILD_HASH__}
       </button>
