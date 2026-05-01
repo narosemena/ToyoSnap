@@ -30,3 +30,40 @@
   @apply bg-amber-50 border border-amber-200 rounded;
   @apply dark:bg-amber-900/20 dark:border-amber-700 dark:text-amber-200;
 }
+
+/* ── VectoSnap design token layer ─────────────────────────────────────── */
+:root {
+  /* Accent — indigo */
+  --vs-accent:       oklch(0.62 0.19 258);
+  --vs-accent-hover: oklch(0.56 0.20 258);
+  --vs-accent-soft:  oklch(0.96 0.03 258);
+
+  /* Neutrals — cool-toned */
+  --vs-n-50:  oklch(0.985 0.002 264);
+  --vs-n-100: oklch(0.960 0.003 264);
+  --vs-n-200: oklch(0.920 0.005 264);
+  --vs-n-300: oklch(0.840 0.008 264);
+  --vs-n-400: oklch(0.720 0.012 264);
+  --vs-n-500: oklch(0.590 0.016 264);
+  --vs-n-600: oklch(0.460 0.014 264);
+  --vs-n-700: oklch(0.360 0.012 264);
+  --vs-n-800: oklch(0.270 0.010 264);
+  --vs-n-900: oklch(0.190 0.008 264);
+
+  /* Semantic */
+  --vs-record:  oklch(0.58 0.19  25);
+  --vs-success: oklch(0.62 0.15 155);
+  --vs-warn:    oklch(0.72 0.17  75);
+
+  /* Shadows */
+  --vs-shadow-sm:    0 1px  2px oklch(0 0 0 / 0.06);
+  --vs-shadow-md:    0 4px 12px oklch(0 0 0 / 0.08);
+  --vs-shadow-lg:    0 8px 24px oklch(0 0 0 / 0.12);
+  --vs-shadow-popup: 0 8px 32px oklch(0 0 0 / 0.16), 0 2px 8px oklch(0 0 0 / 0.08);
+
+  /* Radii */
+  --vs-r-sm: 6px;
+  --vs-r-md: 8px;
+  --vs-r-lg: 12px;
+  --vs-r-xl: 16px;
+}
