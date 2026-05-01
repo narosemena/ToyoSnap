@@ -28,4 +28,13 @@ describe('ModeSelector', () => {
     render(<ModeSelector value="image-chain" onChange={() => {}} disabled={true} />);
     screen.getAllByRole('radio').forEach((c) => expect(c).toBeDisabled());
   });
+
+  it('moves focus with arrow keys', async () => {
+    const onChange = vi.fn();
+    render(<ModeSelector value="image-chain" onChange={onChange} disabled={false} />);
+    const imgCard = screen.getByRole('radio', { name: /Screenshot Chain/i });
+    imgCard.focus();
+    fireEvent.keyDown(imgCard, { key: 'ArrowRight' });
+    expect(onChange).toHaveBeenCalledWith('svg');
+  });
 });

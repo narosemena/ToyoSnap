@@ -87,9 +87,6 @@ export default defineConfig({
   test: {
     // Use jsdom for React component tests; pure TS unit tests run fine in jsdom too.
     environment: "jsdom",
-    // Enable Vitest globals (describe, it, expect, etc.) so @testing-library/react
-    // auto-cleanup via afterEach hooks works correctly.
-    globals: true,
     // Import @testing-library/jest-dom matchers globally for all tests
     setupFiles: ["tests/unit/setup.ts"],
     // Exclude worktrees so vitest doesn't double-run tests from git worktrees
