@@ -8,6 +8,7 @@ export type ExtensionMessage =
   | { type: "END_CAPTURE" }
   | { type: "CAPTURE_STEP"; payload: { actionStep: ActionStep } }
   | { type: "TRIGGER_CAPTURE_VISIBLE_TAB"; payload: { tabId: number } }
+  | { type: "GET_SESSION_STATE" }
   | { type: "GET_TAB_ID" }
   | { type: "RRWEB_BATCH"; payload: { sessionId: string; events: unknown[]; url?: string; pageTitle?: string } }
   | { type: "CAPTURE_IMAGE_STEP"; payload: { sessionId: string; url: string; pageTitle: string } }

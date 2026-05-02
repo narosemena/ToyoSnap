@@ -53,8 +53,14 @@ export function useSession() {
 
   useEffect(() => {
     refreshState();
-    const listener = (message: any) => {
-      if (message.type === 'SESSION_UPDATED') setState(message.payload);
+    const listener = (message: unknown) => {
+      if (
+        typeof message === 'object' &&
+        message !== null &&
+        (message as { type?: unknown }).type === 'SESSION_UPDATED'
+      ) {
+        setState((message as { payload: SessionState }).payload);
+      }
     };
     chrome.runtime.onMessage.addListener(listener);
     return () => chrome.runtime.onMessage.removeListener(listener);

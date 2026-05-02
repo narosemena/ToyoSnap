@@ -24,7 +24,6 @@ import {
 } from "@/storage/ephemeral-db";
 import type { ExtensionMessage } from "@/types/messages";
 import type { CaptureSession, CaptureMode, CaptureStep, SvgTextElement } from "@/types/capture";
-import type { DesignSystem } from "@/types/design-system";
 
 // —— SVG helpers ————————————————————————————————————————————————————————————
 
@@ -121,7 +120,7 @@ chrome.runtime.onMessage.addListener(
   (rawMsg: unknown, sender: chrome.runtime.MessageSender, sendResponse: (r: any) => void) => {
     if (!isValidSender(sender)) return; 
 
-    const msg = rawMsg as any; 
+    const msg = rawMsg as ExtensionMessage;
 
     switch (msg.type) {
       case "GET_SESSION_STATE":
@@ -171,35 +170,35 @@ chrome.runtime.onMessage.addListener(
         return true;
 
       case "RRWEB_BATCH": {
-        const { sessionId, events, url, pageTitle } = msg.payload as {
-          sessionId: string;
-          events: unknown[];
-          url?: string;
-          pageTitle?: string;
-        };
+        const { sessionId, events, url, pageTitle } = msg.payload;
         if (events?.length) {
           void (async () => {
-            const stepIndex = (await countStepsBySession(sessionId)) + 1;
-            const step: CaptureStep = {
-              sessionId,
-              stepIndex,
-              timestamp: Date.now(),
-              url: url ?? "",
-              pageTitle: pageTitle ?? "",
-              blobId: null,
-              rrwebEvents: events as CaptureStep["rrwebEvents"],
-              actionStep: null,
-              spotlightSelector: null,
-            };
-            await putStep(step);
-            // Update step count and ensure we're targeting the correct tab for broadcasts
-            const hasSession = await getSessionControlPlane();
-            if (hasSession && hasSession.activeSessionId === sessionId) {
-              await setSessionControlPlane({ 
-                stepCount: stepIndex,
-                activeTabId: sender.tab?.id ?? hasSession.activeTabId 
-              });
-              await broadcastStateUpdate();
+            try {
+              const stepIndex = (await countStepsBySession(sessionId)) + 1;
+              const step: CaptureStep = {
+                sessionId,
+                stepIndex,
+                timestamp: Date.now(),
+                url: url ?? "",
+                pageTitle: pageTitle ?? "",
+                blobId: null,
+                rrwebEvents: events as CaptureStep["rrwebEvents"],
+                actionStep: null,
+                spotlightSelector: null,
+              };
+              await putStep(step);
+              const hasSession = await getSessionControlPlane();
+              if (hasSession && hasSession.activeSessionId === sessionId) {
+                await setSessionControlPlane({
+                  stepCount: stepIndex,
+                  activeTabId: sender.tab?.id ?? hasSession.activeTabId,
+                });
+                await broadcastStateUpdate();
+              }
+            } catch (err) {
+              if (import.meta.env.DEV) {
+                console.error("[ToyoSnap SW] RRWEB_BATCH failed:", err);
+              }
             }
           })();
         }
@@ -211,9 +210,7 @@ chrome.runtime.onMessage.addListener(
         // Content scripts cannot write to the extension-origin IDB.
         // SW captures the screenshot and stores blob + step directly.
         void (async () => {
-          const { sessionId, url, pageTitle } = msg.payload as {
-            sessionId: string; url: string; pageTitle: string;
-          };
+          const { sessionId, url, pageTitle } = msg.payload;
           try {
             const session = await getSession(sessionId);
             const fmt: "png" | "jpeg" = session?.imageFormat === "jpeg" ? "jpeg" : "png";
@@ -288,9 +285,7 @@ chrome.runtime.onMessage.addListener(
         // SVG and video captures generate binary in the content script context.
         // Transfer via base64 and store in extension-origin IDB here in the SW.
         void (async () => {
-          const { sessionId, url, pageTitle, base64, mimeType: payloadMime } = msg.payload as {
-            sessionId: string; url: string; pageTitle: string; base64: string; mimeType: string;
-          };
+          const { sessionId, url, pageTitle, base64, mimeType: payloadMime } = msg.payload;
           try {
             const binary = atob(base64);
             const bytes = new Uint8Array(binary.length);
@@ -324,9 +319,13 @@ chrome.runtime.onMessage.addListener(
 
       case "EXPORT_SESSION_DATA": {
         void (async () => {
-          const { sessionId } = msg.payload as { sessionId: string };
-          const steps = await getStepsBySession(sessionId);
-          sendResponse({ steps });
+          try {
+            const { sessionId } = msg.payload;
+            const steps = await getStepsBySession(sessionId);
+            sendResponse({ steps });
+          } catch (err) {
+            sendResponse({ error: String(err) });
+          }
         })();
         return true;
       }
@@ -341,7 +340,7 @@ chrome.runtime.onMessage.addListener(
 
       case "DESIGN_SYSTEM_SAVED": {
         void (async () => {
-          const { designSystem } = msg.payload as { sessionId: string; designSystem: DesignSystem };
+          const { designSystem } = msg.payload;
           if (designSystem) await putDesignSystem(designSystem);
         })();
         break;
