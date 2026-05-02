@@ -1,5 +1,4 @@
 // src/editor/components/export/ExportProgressModal.tsx
-import React from "react";
 
 interface Props {
   phase: "progress" | "done";
@@ -40,6 +39,7 @@ export function ExportProgressModal({ phase, percent, filename, onDone, onExport
 
             <div
               role="progressbar"
+              aria-label="Export progress"
               aria-valuenow={percent}
               aria-valuemin={0}
               aria-valuemax={100}

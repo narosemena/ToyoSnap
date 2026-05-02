@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useEditorStore } from "@/editor/store/editor-store";
 import { ExportSensitivityWarning } from "./ExportSensitivityWarning";
 import { ExportProgressModal } from "./ExportProgressModal";
@@ -64,13 +64,23 @@ function downloadBlob(blob: Blob, filename: string) {
 type ExportPhase = "idle" | "warning" | "progress" | "done";
 
 export function ExportPanel() {
-  const { activeSessionId, exportSensitivityAcknowledged } = useEditorStore();
+  const { activeSessionId, exportSensitivityAcknowledged, acknowledgeExportSensitivity } = useEditorStore();
   const [exportPhase, setExportPhase] = useState<ExportPhase>("idle");
   const [exportPercent, setExportPercent] = useState(0);
   const [exportFilename, setExportFilename] = useState("");
   const [activeFormat, setActiveFormat] = useState<ExportFormat | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [session, setSession] = useState<CaptureSession | null>(null);
+
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     if (!activeSessionId) { setSession(null); return; }
@@ -83,21 +93,21 @@ export function ExportPanel() {
     setExportPercent(0);
     setError(null);
 
-    const interval = setInterval(() => {
+    intervalRef.current = setInterval(() => {
       setExportPercent((p) => (p < 85 ? p + Math.floor(Math.random() * 12) + 3 : p));
     }, 180);
 
     try {
       const blob = await format.run(activeSessionId);
-      clearInterval(interval);
+      clearInterval(intervalRef.current!);
       setExportPercent(100);
       const ts = new Date().toISOString().slice(0, 10);
       const filename = `toyosnap-${activeSessionId.slice(0, 8)}-${ts}.${format.ext}`;
       setExportFilename(filename);
       downloadBlob(blob, filename);
-      setTimeout(() => setExportPhase("done"), 300);
+      timeoutRef.current = setTimeout(() => setExportPhase("done"), 300);
     } catch (err) {
-      clearInterval(interval);
+      clearInterval(intervalRef.current!);
       setExportPhase("idle");
       setError(`Export failed: ${err instanceof Error ? err.message : String(err)}`);
     }
@@ -131,6 +141,7 @@ export function ExportPanel() {
       {exportPhase === "warning" && activeFormat && (
         <ExportSensitivityWarning
           onConfirm={() => {
+            acknowledgeExportSensitivity();
             setExportPhase("idle");
             void runExport(activeFormat);
           }}
@@ -140,7 +151,7 @@ export function ExportPanel() {
 
       {(exportPhase === "progress" || exportPhase === "done") && (
         <ExportProgressModal
-          phase={exportPhase as "progress" | "done"}
+          phase={exportPhase}
           percent={exportPercent}
           filename={exportFilename}
           onDone={() => setExportPhase("idle")}
