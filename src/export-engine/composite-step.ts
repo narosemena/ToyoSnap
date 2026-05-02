@@ -7,6 +7,7 @@
  * Runs in the editor page context (has canvas / Blob APIs).
  */
 import { getBlob } from "@/storage/ephemeral-db";
+import { applyPixelate } from "@/editor/components/pixelate-renderer";
 import type { CaptureStep } from "@/types/capture";
 import type { LedgerEntry } from "@/types/ledger";
 
@@ -80,6 +81,15 @@ async function compositeStep(
         tctx.filter = `blur(${radius}px)`;
         tctx.drawImage(canvas, rx, ry, rw, rh, 0, 0, rw, rh);
         ctx.drawImage(tmp, rx, ry);
+      } else if (op.operationType === "pixelate") {
+        // Pixelate: sample + fill each cell block using a temporary canvas
+        const tmp = document.createElement("canvas");
+        tmp.width = rw;
+        tmp.height = rh;
+        const tctx = tmp.getContext("2d")!;
+        tctx.drawImage(canvas, rx, ry, rw, rh, 0, 0, rw, rh);
+        applyPixelate(tctx, { x: 0, y: 0, w: rw, h: rh }, op.pixelCellSize ?? 8);
+        ctx.drawImage(tmp, rx, ry);
       } else {
         ctx.fillStyle = op.redactColor ?? "#000000";
         ctx.fillRect(rx, ry, rw, rh);
@@ -139,6 +149,15 @@ export function compositeStepToSvgBytes(
       overlayFragments.push(
         `<filter id="${filterId}"><feGaussianBlur stdDeviation="${radius}"/></filter>`,
         `<rect x="${xPct}" y="${yPct}" width="${wPct}" height="${hPct}" filter="url(#${filterId})" fill="none"/>`
+      );
+    } else if (op.operationType === "pixelate") {
+      // SVG has no native pixelate; approximate with a strong feGaussianBlur
+      // and mark with data-toyosnap-op for auditability.
+      const cellSize = op.pixelCellSize ?? 8;
+      const filterId = `ts-pixelate-${i}`;
+      overlayFragments.push(
+        `<filter id="${filterId}"><feGaussianBlur stdDeviation="${Math.floor(cellSize / 2)}"/></filter>`,
+        `<rect x="${xPct}" y="${yPct}" width="${wPct}" height="${hPct}" filter="url(#${filterId})" fill="none" data-toyosnap-op="pixelate"/>`
       );
     } else {
       const fill = op.redactColor ?? "#000000";
