@@ -24,4 +24,5 @@ export interface SessionControlPlane {
   activeSessionId: string;
   recordingStartedAt: number;
   activeTabId: number;
+  stepCount?: number;
 }

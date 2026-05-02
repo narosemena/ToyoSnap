@@ -1,11 +1,10 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
 import { ModeSelector } from "./components/ModeSelector";
-import { RecordButton } from "./components/RecordButton";
 import { CursorToggle } from "./components/CursorToggle";
 import { StatusBadge } from "./components/StatusBadge";
 import { ImageFormatSelector } from "./components/ImageFormatSelector";
-import { useSession } from "./hooks/useSession";
+import { useSession, formatElapsed } from "./hooks/useSession";
 import type { CaptureMode } from "@/types/capture";
 import type { ExtensionMessage } from "@/types/messages";
 import "../styles/globals.css";
@@ -17,16 +16,18 @@ function Popup() {
   const [imageFormat, setImageFormat] = React.useState<"png" | "jpeg">("png");
 
   // Hook handles global recording state synced with Service Worker
-  const { 
-    isRecording, 
-    captureMode, 
-    captureCursor: sessionCursor, 
-    loading, 
-    refreshState 
+  const {
+    isRecording,
+    captureMode,
+    captureCursor: sessionCursor,
+    loading,
+    refreshState,
+    elapsedMs,
+    stepCount,
   } = useSession();
 
   /**
-   * UI Logic: If we are recording, the UI should reflect the settings 
+   * UI Logic: If we are recording, the UI should reflect the settings
    * used when the session started. If not, it shows the local selection.
    */
   const activeMode = isRecording && captureMode ? captureMode : mode;
@@ -55,50 +56,95 @@ function Popup() {
     void chrome.tabs.create({ url });
   }
 
-  // Prevent flicker while the hook performs the initial handshake with the SW
   if (loading) return null;
 
+  // ── Recording state ─────────────────────────────────────────────────────
+  if (isRecording) {
+    return (
+      <div className="flex flex-col gap-3 p-4 w-60 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+        <div className="flex items-center gap-2">
+          <span className="inline-block w-2 h-2 rounded-full bg-[var(--vs-record)] motion-safe:animate-pulse" />
+          <span className="text-xs font-semibold uppercase tracking-wide text-[var(--vs-record)]">
+            Recording
+          </span>
+          <span className="ml-auto text-xs font-mono text-gray-500 dark:text-gray-400">
+            {formatElapsed(elapsedMs)}
+          </span>
+        </div>
+
+        <div className="flex items-center justify-between rounded-lg bg-gray-50 dark:bg-gray-800 px-3 py-2.5">
+          <span className="text-xs text-gray-500 dark:text-gray-400">
+            {captureMode === "svg" ? "SVG Layers" : "Screenshot Chain"}
+          </span>
+          <span className="text-xs font-mono font-semibold tabular-nums text-gray-700 dark:text-gray-300">
+            {String(stepCount ?? 0).padStart(2, "0")} steps
+          </span>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleToggleRecord}
+          className="w-full py-2 rounded-lg text-sm font-semibold text-white transition-opacity hover:opacity-90"
+          style={{ background: "var(--vs-record)" }}
+        >
+          Stop recording
+        </button>
+
+        <p className="text-[10px] text-center text-gray-400 dark:text-gray-500">
+          Encrypted at rest · Zero-egress
+        </p>
+      </div>
+    );
+  }
+
+  // ── Idle state ───────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col gap-3 p-4 min-w-60 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
-      <div className="flex items-center justify-between">
-        <span className="text-sm font-semibold tracking-wide uppercase opacity-70">ToyoSnap</span>
-        <StatusBadge isRecording={isRecording} />
+    <div className="flex flex-col gap-3 p-4 w-60 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+      <div className="flex items-center gap-2">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <defs>
+            <linearGradient id="vs-lg" x1="0" y1="0" x2="20" y2="20" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stopColor="oklch(0.62 0.19 258)"/>
+              <stop offset="100%" stopColor="oklch(0.58 0.19 25)"/>
+            </linearGradient>
+          </defs>
+          <rect width="20" height="20" rx="5" fill="url(#vs-lg)"/>
+          <path d="M5 10h10M10 5v10" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
+        </svg>
+        <span className="text-sm font-semibold">ToyoSnap</span>
+        <div className="ml-auto">
+          <StatusBadge isRecording={false} />
+        </div>
       </div>
 
-      <ModeSelector
-        value={activeMode}
-        onChange={setMode}
-        disabled={isRecording}
-      />
+      <ModeSelector value={activeMode} onChange={setMode} disabled={false} />
 
       {activeMode === "image-chain" && (
-        <ImageFormatSelector
-          value={imageFormat}
-          onChange={setImageFormat}
-          disabled={isRecording}
-        />
+        <ImageFormatSelector value={imageFormat} onChange={setImageFormat} disabled={false} />
       )}
 
-      <CursorToggle
-        checked={activeCursor}
-        onChange={setCaptureCursor}
-        disabled={isRecording}
-      />
+      <CursorToggle checked={activeCursor} onChange={setCaptureCursor} disabled={false} />
 
-      <div className="mt-2">
-        <RecordButton 
-          isRecording={isRecording} 
-          onClick={handleToggleRecord} 
-        />
-      </div>
+      <button
+        type="button"
+        onClick={handleToggleRecord}
+        className="w-full py-2 rounded-lg text-sm font-semibold text-white transition-opacity hover:opacity-90 mt-1"
+        style={{ background: "var(--vs-accent)" }}
+      >
+        Start recording
+      </button>
 
       <button
         type="button"
         onClick={openEditor}
-        className="text-xs text-center text-blue-600 dark:text-blue-400 hover:underline mt-2 transition-opacity duration-150 hover:opacity-80 cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 rounded"
+        className="w-full py-1.5 rounded-lg text-xs font-medium border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
       >
-        Open Vault & Editor
+        Open Studio
       </button>
+
+      <p className="text-[10px] text-center text-gray-400 dark:text-gray-500">
+        Zero-egress · Encrypted at rest
+      </p>
     </div>
   );
 }

@@ -149,6 +149,11 @@ chrome.runtime.onMessage.addListener(
               rrwebEvents: null, actionStep: null, spotlightSelector: null,
             };
             await putStep(step);
+            const updatedPlane = await getSessionControlPlane();
+            if (updatedPlane) {
+              await setSessionControlPlane({ ...updatedPlane, stepCount: stepIndex });
+              await broadcastStateUpdate();
+            }
             sendResponse({ ok: true });
           } catch (err) {
             sendResponse({ error: String(err) });
@@ -178,6 +183,11 @@ chrome.runtime.onMessage.addListener(
               rrwebEvents: null, actionStep: null, spotlightSelector: null,
             };
             await putStep(step);
+            const updatedPlane = await getSessionControlPlane();
+            if (updatedPlane) {
+              await setSessionControlPlane({ ...updatedPlane, stepCount: stepIndex });
+              await broadcastStateUpdate();
+            }
             sendResponse({ ok: true });
           } catch (err) {
             sendResponse({ error: String(err) });
