@@ -37,15 +37,47 @@ export function mountOverlay(captureMode: string, onStop: () => void): void {
 
   const pill = document.createElement("div");
   pill.id = "vs-pill";
-  pill.innerHTML = `
-    <span class="vs-dot"></span>
-    <span class="vs-label">${modeLabel}</span>
-    <span class="vs-sep">·</span>
-    <span id="vs-timer" class="vs-timer">00:00</span>
-    <span class="vs-sep">·</span>
-    <span class="vs-steps-wrap"><span id="vs-steps">00</span>&nbsp;steps</span>
-    <button class="vs-stop-btn" id="vs-stop">Stop</button>
-  `;
+
+  const dot = document.createElement("span");
+  dot.className = "vs-dot";
+  pill.appendChild(dot);
+
+  const label = document.createElement("span");
+  label.className = "vs-label";
+  label.textContent = modeLabel;
+  pill.appendChild(label);
+
+  const sep1 = document.createElement("span");
+  sep1.className = "vs-sep";
+  sep1.textContent = "·";
+  pill.appendChild(sep1);
+
+  const timer = document.createElement("span");
+  timer.id = "vs-timer";
+  timer.className = "vs-timer";
+  timer.textContent = "00:00";
+  pill.appendChild(timer);
+
+  const sep2 = document.createElement("span");
+  sep2.className = "vs-sep";
+  sep2.textContent = "·";
+  pill.appendChild(sep2);
+
+  const stepsWrap = document.createElement("span");
+  stepsWrap.className = "vs-steps-wrap";
+  const stepsSpan = document.createElement("span");
+  stepsSpan.id = "vs-steps";
+  stepsSpan.textContent = "00";
+  stepsWrap.appendChild(stepsSpan);
+  stepsWrap.append(" steps");
+  pill.appendChild(stepsWrap);
+
+  const stopBtn = document.createElement("button");
+  stopBtn.className = "vs-stop-btn";
+  stopBtn.id = "vs-stop";
+  stopBtn.textContent = "Stop";
+  pill.appendChild(stopBtn);
+
   shadow.appendChild(pill);
 
   shadow.getElementById("vs-stop")?.addEventListener("click", () => {
