@@ -13,6 +13,7 @@ import { StepLogBuilder } from "@/action-logger/step-log-builder";
 import { extractDesignTokens } from "@/lib/design-extractor";
 import { detectAntiPatterns } from "@/lib/anti-pattern";
 import { getStepsBySession } from "@/storage/ephemeral-db";
+import { mountOverlay, unmountOverlay } from './recording-overlay';
 
 let engine: BaseCapture | null = null;
 let cursorTracker: CursorTracker | null = null;
@@ -62,6 +63,11 @@ export const startCapture = async (
   void stepLogger; // suppress unused-variable lint
 
   await engine.start();
+
+  mountOverlay(mode, () => {
+    chrome.runtime.sendMessage({ type: "STOP_CAPTURE" });
+    void stopCapture();
+  });
 };
 
 export const stopCapture = async (): Promise<void> => {
@@ -70,6 +76,7 @@ export const stopCapture = async (): Promise<void> => {
   const sessionId = activeSessionId;
 
   await engine.stop();
+  unmountOverlay();
   engine = null;
   activeSessionId = null;
 
