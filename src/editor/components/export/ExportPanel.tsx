@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useEditorStore } from "@/editor/store/editor-store";
 import { ExportSensitivityWarning } from "./ExportSensitivityWarning";
+import { ExportProgressModal } from "./ExportProgressModal";
 import { exportPngZip } from "@/export-engine/png-zip-exporter";
 import { exportJpegZip } from "@/export-engine/jpeg-zip-exporter";
 import { exportSvgZip } from "@/export-engine/svg-zip-exporter";
@@ -16,6 +17,7 @@ interface ExportFormat {
   onlyForMode?: CaptureMode;
   /** If set, only show for image-chain when imageFormat matches */
   onlyForImageFormat?: "png" | "jpeg";
+  recommended?: boolean;
 }
 
 const FORMATS: ExportFormat[] = [
@@ -27,6 +29,7 @@ const FORMATS: ExportFormat[] = [
     run: exportPngZip,
     onlyForMode: "image-chain",
     onlyForImageFormat: "png",
+    recommended: true,
   },
   {
     id: "jpeg",
@@ -36,6 +39,7 @@ const FORMATS: ExportFormat[] = [
     run: exportJpegZip,
     onlyForMode: "image-chain",
     onlyForImageFormat: "jpeg",
+    recommended: true,
   },
   {
     id: "svg",
@@ -44,6 +48,7 @@ const FORMATS: ExportFormat[] = [
     ext: "zip",
     run: exportSvgZip,
     onlyForMode: "svg",
+    recommended: true,
   },
 ];
 
@@ -56,10 +61,14 @@ function downloadBlob(blob: Blob, filename: string) {
   URL.revokeObjectURL(url);
 }
 
+type ExportPhase = "idle" | "warning" | "progress" | "done";
+
 export function ExportPanel() {
   const { activeSessionId, exportSensitivityAcknowledged } = useEditorStore();
-  const [pendingFormat, setPendingFormat] = useState<ExportFormat | null>(null);
-  const [exportingId, setExportingId] = useState<string | null>(null);
+  const [exportPhase, setExportPhase] = useState<ExportPhase>("idle");
+  const [exportPercent, setExportPercent] = useState(0);
+  const [exportFilename, setExportFilename] = useState("");
+  const [activeFormat, setActiveFormat] = useState<ExportFormat | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [session, setSession] = useState<CaptureSession | null>(null);
 
@@ -67,6 +76,41 @@ export function ExportPanel() {
     if (!activeSessionId) { setSession(null); return; }
     void getSession(activeSessionId).then((s) => setSession(s ?? null));
   }, [activeSessionId]);
+
+  async function runExport(format: ExportFormat) {
+    if (!activeSessionId) return;
+    setExportPhase("progress");
+    setExportPercent(0);
+    setError(null);
+
+    const interval = setInterval(() => {
+      setExportPercent((p) => (p < 85 ? p + Math.floor(Math.random() * 12) + 3 : p));
+    }, 180);
+
+    try {
+      const blob = await format.run(activeSessionId);
+      clearInterval(interval);
+      setExportPercent(100);
+      const ts = new Date().toISOString().slice(0, 10);
+      const filename = `toyosnap-${activeSessionId.slice(0, 8)}-${ts}.${format.ext}`;
+      setExportFilename(filename);
+      downloadBlob(blob, filename);
+      setTimeout(() => setExportPhase("done"), 300);
+    } catch (err) {
+      clearInterval(interval);
+      setExportPhase("idle");
+      setError(`Export failed: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
+  function handleExportClick(format: ExportFormat) {
+    setActiveFormat(format);
+    if (!exportSensitivityAcknowledged) {
+      setExportPhase("warning");
+    } else {
+      void runExport(format);
+    }
+  }
 
   if (!activeSessionId) {
     return (
@@ -82,92 +126,73 @@ export function ExportPanel() {
     return true;
   });
 
-  async function runExport(format: ExportFormat) {
-    if (!activeSessionId) return;
-    setExportingId(format.id);
-    setError(null);
-    try {
-      const blob = await format.run(activeSessionId);
-      const ts = new Date().toISOString().slice(0, 10);
-      downloadBlob(blob, `toyosnap-${activeSessionId.slice(0, 8)}-${ts}.${format.ext}`);
-    } catch (err) {
-      setError(`Export failed: ${err instanceof Error ? err.message : String(err)}`);
-    } finally {
-      setExportingId(null);
-    }
-  }
-
-  function handleExportClick(format: ExportFormat) {
-    if (!exportSensitivityAcknowledged) {
-      setPendingFormat(format);
-    } else {
-      void runExport(format);
-    }
-  }
-
   return (
-    <section aria-label="Export options">
-      {pendingFormat && (
+    <>
+      {exportPhase === "warning" && activeFormat && (
         <ExportSensitivityWarning
           onConfirm={() => {
-            const f = pendingFormat;
-            setPendingFormat(null);
-            void runExport(f);
+            setExportPhase("idle");
+            void runExport(activeFormat);
           }}
-          onCancel={() => setPendingFormat(null)}
+          onCancel={() => setExportPhase("idle")}
         />
       )}
 
-      {error && (
-        <p role="alert" className="mb-3 text-sm text-red-600 dark:text-red-400">
-          {error}
-        </p>
+      {(exportPhase === "progress" || exportPhase === "done") && (
+        <ExportProgressModal
+          phase={exportPhase as "progress" | "done"}
+          percent={exportPercent}
+          filename={exportFilename}
+          onDone={() => setExportPhase("idle")}
+          onExportAnother={() => setExportPhase("idle")}
+        />
       )}
 
-      <ul className="grid grid-cols-1 gap-2">
-        {visibleFormats.map((fmt) => {
-          const busy = exportingId === fmt.id;
-          return (
-            <li key={fmt.id}>
-              <button
-                type="button"
-                disabled={busy || exportingId !== null}
-                onClick={() => handleExportClick(fmt)}
-                className="w-full text-left flex items-start gap-3 rounded-lg border border-gray-200 dark:border-gray-700 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 transition-colors"
-                aria-busy={busy}
-              >
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                    {fmt.label}
-                    <span className="ml-1.5 text-xs font-normal text-gray-500 dark:text-gray-400">
-                      .{fmt.ext}
-                    </span>
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                    {fmt.description}
-                  </p>
-                </div>
-                {busy && (
-                  <svg
-                    className="motion-safe:animate-spin h-4 w-4 text-blue-600 shrink-0 mt-0.5"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    aria-hidden="true"
-                  >
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                  </svg>
-                )}
-              </button>
-            </li>
-          );
-        })}
-      </ul>
+      <section aria-label="Export options">
+        {error && (
+          <p role="alert" className="mb-3 text-sm text-red-600 dark:text-red-400">
+            {error}
+          </p>
+        )}
 
-      <p className="mt-4 text-xs text-gray-400 dark:text-gray-500">
-        All exports are generated locally — no data leaves your device.
-      </p>
-    </section>
+        <ul className="grid grid-cols-1 gap-2">
+          {visibleFormats.map((fmt) => {
+            const busy = exportPhase === "progress";
+            return (
+              <li key={fmt.id}>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => handleExportClick(fmt)}
+                  className="w-full text-left flex items-start gap-3 rounded-lg border border-gray-200 dark:border-gray-700 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 transition-colors"
+                  aria-busy={busy}
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100 flex items-center flex-wrap gap-1.5">
+                      {fmt.label}
+                      <span className="text-xs font-normal text-gray-500 dark:text-gray-400">
+                        .{fmt.ext}
+                      </span>
+                      {fmt.recommended && (
+                        <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-[var(--vs-accent-soft)] text-[var(--vs-accent)]">
+                          RECOMMENDED
+                        </span>
+                      )}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                      {fmt.description}
+                    </p>
+                  </div>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+
+        <p className="mt-4 text-xs text-gray-400 dark:text-gray-500">
+          All exports are generated locally — no data leaves your device.
+        </p>
+      </section>
+    </>
   );
 }
