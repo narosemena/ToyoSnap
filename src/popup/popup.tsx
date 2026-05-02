@@ -103,27 +103,27 @@ function Popup() {
       <div className="flex items-center gap-2">
         <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
           <defs>
-            <linearGradient id="vs-lg" x1="0" y1="0" x2="20" y2="20" gradientUnits="userSpaceOnUse">
+            <linearGradient id="vs-popup-logo-gradient" x1="0" y1="0" x2="20" y2="20" gradientUnits="userSpaceOnUse">
               <stop offset="0%" stopColor="oklch(0.62 0.19 258)"/>
               <stop offset="100%" stopColor="oklch(0.58 0.19 25)"/>
             </linearGradient>
           </defs>
-          <rect width="20" height="20" rx="5" fill="url(#vs-lg)"/>
+          <rect width="20" height="20" rx="5" fill="url(#vs-popup-logo-gradient)"/>
           <path d="M5 10h10M10 5v10" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
         </svg>
         <span className="text-sm font-semibold">ToyoSnap</span>
         <div className="ml-auto">
-          <StatusBadge isRecording={false} />
+          <StatusBadge isRecording={isRecording} />
         </div>
       </div>
 
-      <ModeSelector value={activeMode} onChange={setMode} disabled={false} />
+      <ModeSelector value={activeMode} onChange={setMode} disabled={isRecording} />
 
       {activeMode === "image-chain" && (
-        <ImageFormatSelector value={imageFormat} onChange={setImageFormat} disabled={false} />
+        <ImageFormatSelector value={imageFormat} onChange={setImageFormat} disabled={isRecording} />
       )}
 
-      <CursorToggle checked={activeCursor} onChange={setCaptureCursor} disabled={false} />
+      <CursorToggle checked={activeCursor} onChange={setCaptureCursor} disabled={isRecording} />
 
       <button
         type="button"

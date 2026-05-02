@@ -114,6 +114,12 @@ chrome.runtime.onMessage.addListener(
               spotlightSelector: null,
             };
             await putStep(step);
+            // Keep stepCount in sync for rrweb sessions (same partial-update pattern).
+            const hasSession = await getSessionControlPlane();
+            if (hasSession) {
+              await setSessionControlPlane({ stepCount: stepIndex });
+              await broadcastStateUpdate();
+            }
           })();
         }
         sendResponse({ ok: true });
@@ -149,9 +155,11 @@ chrome.runtime.onMessage.addListener(
               rrwebEvents: null, actionStep: null, spotlightSelector: null,
             };
             await putStep(step);
-            const updatedPlane = await getSessionControlPlane();
-            if (updatedPlane) {
-              await setSessionControlPlane({ ...updatedPlane, stepCount: stepIndex });
+            // setSessionControlPlane accepts a partial update and merges internally,
+            // so we only pass stepCount — no extra read needed, avoiding a TOCTOU window.
+            const hasSession = await getSessionControlPlane();
+            if (hasSession) {
+              await setSessionControlPlane({ stepCount: stepIndex });
               await broadcastStateUpdate();
             }
             sendResponse({ ok: true });
@@ -183,9 +191,11 @@ chrome.runtime.onMessage.addListener(
               rrwebEvents: null, actionStep: null, spotlightSelector: null,
             };
             await putStep(step);
-            const updatedPlane = await getSessionControlPlane();
-            if (updatedPlane) {
-              await setSessionControlPlane({ ...updatedPlane, stepCount: stepIndex });
+            // setSessionControlPlane accepts a partial update and merges internally,
+            // so we only pass stepCount — no extra read needed, avoiding a TOCTOU window.
+            const hasSession = await getSessionControlPlane();
+            if (hasSession) {
+              await setSessionControlPlane({ stepCount: stepIndex });
               await broadcastStateUpdate();
             }
             sendResponse({ ok: true });

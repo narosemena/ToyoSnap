@@ -37,7 +37,6 @@ export function useSession() {
 
   // Tick elapsed timer while recording
   useEffect(() => {
-    if (timerRef.current) clearInterval(timerRef.current);
     if (state.isRecording && state.recordingStartedAt) {
       timerRef.current = setInterval(() => {
         setElapsedMs(Date.now() - (state.recordingStartedAt ?? Date.now()));
