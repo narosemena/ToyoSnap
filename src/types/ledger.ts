@@ -1,4 +1,4 @@
-export type PIIOperationType = "blur" | "redact";
+export type PIIOperationType = "blur" | "redact" | "pixelate";
 
 export interface LedgerEntry {
   id: string;
@@ -12,6 +12,8 @@ export interface LedgerEntry {
   stepIndex?: number | null;
   /** Blur radius in px (for blur ops on image/SVG steps) */
   blurRadius?: number | null;
+  /** Pixel cell size in px (for pixelate ops on image/SVG steps) */
+  pixelCellSize?: number | null;
   /** Fill color for redact ops on image/SVG steps (hex string) */
   redactColor?: string | null;
   applyGlobally: boolean;

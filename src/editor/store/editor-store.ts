@@ -4,19 +4,22 @@ import type { CaptureMode } from "@/types/capture";
 
 export interface BlurSettings { radius: number }
 export interface RedactSettings { color: string; label: string }
+export interface PixelateSettings { cellSize: number }
 
 interface EditorStore {
   activeSessionId: string | null;
   activeStepIndex: number;
-  activeTool: "blur" | "redact" | null;
+  activeTool: "blur" | "redact" | "pixelate" | null;
   previewMode: CaptureMode;
   isHydrated: boolean;
   exportSensitivityAcknowledged: boolean;
   blurSettings: BlurSettings;
   redactSettings: RedactSettings;
+  pixelateSettings: PixelateSettings;
   setActiveSession: (id: string | null) => void;
   setActiveStep: (index: number) => void;
-  setActiveTool: (tool: "blur" | "redact" | null) => void;
+  setActiveTool: (tool: "blur" | "redact" | "pixelate" | null) => void;
+  setPixelateSettings: (s: PixelateSettings) => void;
   setPreviewMode: (mode: CaptureMode) => void;
   setHydrated: (v: boolean) => void;
   acknowledgeExportSensitivity: () => void;
@@ -26,6 +29,7 @@ interface EditorStore {
 
 const LS_BLUR = "toyosnap_blur_settings";
 const LS_REDACT = "toyosnap_redact_settings";
+const LS_PIXELATE = "toyosnap_pixelate_settings";
 
 function loadBlur(): BlurSettings {
   try { const v = localStorage.getItem(LS_BLUR); if (v) return JSON.parse(v) as BlurSettings; } catch {}
@@ -34,6 +38,10 @@ function loadBlur(): BlurSettings {
 function loadRedact(): RedactSettings {
   try { const v = localStorage.getItem(LS_REDACT); if (v) return JSON.parse(v) as RedactSettings; } catch {}
   return { color: "#000000", label: "[REDACTED]" };
+}
+function loadPixelate(): PixelateSettings {
+  try { const v = localStorage.getItem(LS_PIXELATE); if (v) return JSON.parse(v) as PixelateSettings; } catch {}
+  return { cellSize: 8 };
 }
 
 export const useEditorStore = create<EditorStore>()(
@@ -46,6 +54,7 @@ export const useEditorStore = create<EditorStore>()(
     exportSensitivityAcknowledged: false,
     blurSettings: loadBlur(),
     redactSettings: loadRedact(),
+    pixelateSettings: loadPixelate(),
 
     setActiveSession: (id) =>
       set((state) => {
@@ -81,6 +90,10 @@ export const useEditorStore = create<EditorStore>()(
     setRedactSettings: (s) => {
       localStorage.setItem(LS_REDACT, JSON.stringify(s));
       set((state) => { state.redactSettings = s; });
+    },
+    setPixelateSettings: (s) => {
+      localStorage.setItem(LS_PIXELATE, JSON.stringify(s));
+      set((state) => { state.pixelateSettings = s; });
     },
   }))
 );

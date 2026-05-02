@@ -3,6 +3,7 @@ import type { CaptureStep } from "@/types/capture";
 import type { LedgerEntry } from "@/types/ledger";
 import { useEditorStore } from "@/editor/store/editor-store";
 import { usePIIStore } from "@/editor/store/pii-store";
+import { PrimitiveInspector } from "./PrimitiveInspector";
 
 interface PIICanvasProps {
   step: CaptureStep | null;
@@ -149,7 +150,7 @@ function ToolToggle({
   onToggle,
   onGear,
 }: {
-  tool: "blur" | "redact";
+  tool: "blur" | "redact" | "pixelate";
   label: string;
   active: boolean;
   onToggle: () => void;
@@ -196,11 +197,11 @@ function RegionButton({
   onApply,
 }: {
   region: RegionSelection;
-  activeTool: "blur" | "redact" | null;
+  activeTool: "blur" | "redact" | "pixelate" | null;
   isApplied: boolean;
   onApply: (region: RegionSelection) => void;
 }) {
-  const label = activeTool === "blur" ? "Blur" : activeTool === "redact" ? "Redact" : "Select tool";
+  const label = activeTool === "blur" ? "Blur" : activeTool === "redact" ? "Redact" : activeTool === "pixelate" ? "Pixelate" : "Select tool";
   return (
     <button
       type="button"
@@ -229,13 +230,15 @@ function RegionButton({
 export function PIICanvas({ step }: PIICanvasProps) {
   const {
     activeTool, setActiveTool, activeSessionId,
-    blurSettings, redactSettings, setBlurSettings, setRedactSettings,
+    blurSettings, redactSettings, pixelateSettings,
+    setBlurSettings, setRedactSettings, setPixelateSettings,
   } = useEditorStore();
   const { applyOperation, undo, redo, appliedOperations, undoStack, redoStack } = usePIIStore();
   const [scope, setScope] = useState<"local" | "global">("local");
   const [customSelector, setCustomSelector] = useState("");
   const [showBlurDialog, setShowBlurDialog] = useState(false);
   const [showRedactDialog, setShowRedactDialog] = useState(false);
+  const [showPixelateInspector, setShowPixelateInspector] = useState(false);
 
   if (!step || !activeSessionId) {
     return (
@@ -279,6 +282,7 @@ export function PIICanvas({ step }: PIICanvasProps) {
   function handleBlurGear() {
     setShowBlurDialog((v) => !v);
     setShowRedactDialog(false);
+    setShowPixelateInspector(false);
   }
 
   function confirmBlur(s: { radius: number }) {
@@ -299,12 +303,26 @@ export function PIICanvas({ step }: PIICanvasProps) {
   function handleRedactGear() {
     setShowRedactDialog((v) => !v);
     setShowBlurDialog(false);
+    setShowPixelateInspector(false);
   }
 
   function confirmRedact(s: { color: string; label: string }) {
     setRedactSettings(s);
     setShowRedactDialog(false);
     setActiveTool("redact");
+  }
+
+  function handlePixelateToggle() {
+    setActiveTool(activeTool === "pixelate" ? null : "pixelate");
+    setShowPixelateInspector(false);
+    setShowBlurDialog(false);
+    setShowRedactDialog(false);
+  }
+
+  function handlePixelateGear() {
+    setShowPixelateInspector((v) => !v);
+    setShowBlurDialog(false);
+    setShowRedactDialog(false);
   }
 
   // Candidate regions from action metadata
@@ -328,6 +346,7 @@ export function PIICanvas({ step }: PIICanvasProps) {
       rrwebId: null,
       elementSelector: region.selector,
       blurRadius: activeTool === "blur" ? blurSettings.radius : null,
+      pixelCellSize: activeTool === "pixelate" ? pixelateSettings.cellSize : null,
       redactColor: activeTool === "redact" ? redactSettings.color : null,
       applyGlobally: scope === "global",
       replacementText: activeTool === "redact" ? redactSettings.label : "",
@@ -362,6 +381,13 @@ export function PIICanvas({ step }: PIICanvasProps) {
               active={activeTool === "blur"}
               onToggle={handleBlurToggle}
               onGear={handleBlurGear}
+            />
+            <ToolToggle
+              tool="pixelate"
+              label="Pixelate"
+              active={activeTool === "pixelate"}
+              onToggle={handlePixelateToggle}
+              onGear={handlePixelateGear}
             />
             <ToolToggle
               tool="redact"
@@ -420,6 +446,23 @@ export function PIICanvas({ step }: PIICanvasProps) {
           />
         )}
 
+        {/* Pixelate settings via PrimitiveInspector */}
+        {showPixelateInspector && (
+          <PrimitiveInspector
+            state={{
+              operationType: "pixelate",
+              pixelCellSize: pixelateSettings.cellSize,
+            }}
+            onChange={(patch) => {
+              if (patch.pixelCellSize != null) {
+                setPixelateSettings({ cellSize: patch.pixelCellSize });
+              }
+              setShowPixelateInspector(false);
+              setActiveTool("pixelate");
+            }}
+          />
+        )}
+
         {/* Row 2: Scope selector */}
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-gray-700 dark:text-gray-300 shrink-0">Scope:</span>
@@ -436,11 +479,13 @@ export function PIICanvas({ step }: PIICanvasProps) {
       </div>
 
       {/* Active-tool hint */}
-      {activeTool && !showBlurDialog && !showRedactDialog && (
+      {activeTool && !showBlurDialog && !showRedactDialog && !showPixelateInspector && (
         <div className="mb-4 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 px-3 py-2 text-xs text-blue-700 dark:text-blue-300">
           <strong className="font-semibold capitalize">{activeTool} active.</strong>{" "}
           {activeTool === "blur"
             ? `Intensity: ${BLUR_PRESETS.find((p) => p.radius === blurSettings.radius)?.label ?? "Custom"}. `
+            : activeTool === "pixelate"
+            ? `Cell size: ${pixelateSettings.cellSize}px. `
             : `Color: ${redactSettings.color}. `}
           Drag a region over the preview to apply.
         </div>
