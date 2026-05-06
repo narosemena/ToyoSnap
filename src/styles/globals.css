@@ -67,3 +67,8 @@
   --vs-r-lg: 12px;
   --vs-r-xl: 16px;
 }
+
+@keyframes vs-pulse-badge {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}

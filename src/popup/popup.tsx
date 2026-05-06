@@ -116,7 +116,7 @@ export function Popup() {
         </svg>
         <span className="text-sm font-semibold">ToyoSnap</span>
         <div className="ml-auto">
-          <StatusBadge isRecording={isRecording} />
+          <StatusBadge isRecording={isRecording} isPaused={false} />
         </div>
       </div>
 
