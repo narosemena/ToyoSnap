@@ -1,7 +1,7 @@
 import React, { useRef } from "react";
 import type { CaptureMode } from "@/types/capture";
 
-const MODES: { value: CaptureMode; label: string; description: string; iconPath: string }[] = [
+const MODES: { value: CaptureMode; label: string; description: string; iconPath: string; comingSoon?: boolean }[] = [
   {
     value: "image-chain",
     label: "PNG chain",
@@ -19,12 +19,14 @@ const MODES: { value: CaptureMode; label: string; description: string; iconPath:
     label: "Video",
     description: "WebM recording of the tab.",
     iconPath: "M15 10l-6-4v8l6-4zM3 6h8a1 1 0 011 1v6a1 1 0 01-1 1H3a1 1 0 01-1-1V7a1 1 0 011-1z",
+    comingSoon: true,
   },
   {
     value: "rrweb",
     label: "HTML replay",
     description: "Self-contained interactive replay.",
     iconPath: "M4 4h12a1 1 0 011 1v10a1 1 0 01-1 1H4a1 1 0 01-1-1V5a1 1 0 011-1zm0 3h12M7 4v3",
+    comingSoon: true,
   },
 ];
 
@@ -40,15 +42,15 @@ export function ModeSelector({ value, onChange, disabled }: Props) {
   function handleKeyDown(e: React.KeyboardEvent, index: number) {
     if (disabled) return;
     let next = index;
-    if (e.key === "ArrowRight" || e.key === "ArrowDown") {
-      e.preventDefault();
-      next = (index + 1) % MODES.length;
-    } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
-      e.preventDefault();
-      next = (index - 1 + MODES.length) % MODES.length;
-    } else {
-      return;
-    }
+    const step = (e.key === "ArrowRight" || e.key === "ArrowDown") ? 1
+               : (e.key === "ArrowLeft"  || e.key === "ArrowUp")   ? -1
+               : 0;
+    if (!step) return;
+    e.preventDefault();
+    // Skip over locked (coming soon) modes
+    do { next = (next + step + MODES.length) % MODES.length; }
+    while (MODES[next].comingSoon && next !== index);
+    if (MODES[next].comingSoon) return; // all remaining locked, do nothing
     onChange(MODES[next].value);
     btnRefs.current[next]?.focus();
   }
@@ -64,6 +66,7 @@ export function ModeSelector({ value, onChange, disabled }: Props) {
       <div className="grid grid-cols-2 gap-2">
         {MODES.map((m, i) => {
           const active = value === m.value;
+          const locked = m.comingSoon === true;
           return (
             <button
               key={m.value}
@@ -71,31 +74,42 @@ export function ModeSelector({ value, onChange, disabled }: Props) {
               type="button"
               role="radio"
               aria-checked={active}
-              aria-label={m.label}
-              disabled={disabled}
+              aria-label={locked ? `${m.label} — coming soon` : m.label}
+              disabled={disabled || locked}
               tabIndex={active ? 0 : -1}
-              onClick={() => onChange(m.value)}
+              onClick={() => !locked && onChange(m.value)}
               onKeyDown={(e) => handleKeyDown(e, i)}
               className={[
                 "relative flex flex-col gap-1 p-[10px] rounded-[10px] border text-left transition-all duration-[160ms]",
                 "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2",
-                "disabled:opacity-40 disabled:cursor-not-allowed",
-                active
+                locked
+                  ? "border-[oklch(0.9_0.008_258)] bg-[oklch(0.97_0.005_258)] cursor-not-allowed opacity-60"
+                  : "disabled:opacity-40 disabled:cursor-not-allowed",
+                !locked && active
                   ? "border-[oklch(0.58_0.19_258)] bg-[oklch(0.97_0.035_258)]"
-                  : "border-[oklch(0.9_0.008_258)] bg-white hover:bg-[oklch(0.985_0.005_258)]",
+                  : !locked
+                  ? "border-[oklch(0.9_0.008_258)] bg-white hover:bg-[oklch(0.985_0.005_258)]"
+                  : "",
               ].join(" ")}
             >
-              {active && (
+              {locked ? (
+                <span
+                  className="absolute top-[6px] right-2 text-[9px] font-bold tracking-[0.4px] uppercase px-[5px] py-[2px] rounded-[4px]"
+                  style={{ background: 'oklch(0.94 0.006 258)', color: '#6a7180' }}
+                >
+                  Soon
+                </span>
+              ) : active ? (
                 <span
                   className="absolute top-[6px] right-2 text-[9px] font-bold tracking-[0.4px] uppercase px-[5px] py-[2px] rounded-[4px] text-white"
                   style={{ background: 'oklch(0.58 0.19 258)' }}
                 >
                   On
                 </span>
-              )}
+              ) : null}
               <div
                 className="flex items-center gap-[7px] text-[13px] font-semibold whitespace-nowrap"
-                style={{ color: active ? 'oklch(0.38 0.14 258)' : '#1d2230' }}
+                style={{ color: locked ? '#9aa0ad' : active ? 'oklch(0.38 0.14 258)' : '#1d2230' }}
               >
                 <svg width="15" height="15" viewBox="0 0 20 20" fill="none"
                   stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"
@@ -105,8 +119,8 @@ export function ModeSelector({ value, onChange, disabled }: Props) {
                 </svg>
                 {m.label}
               </div>
-              <span className="text-[11px] leading-[1.35]" style={{ color: '#6a7180' }}>
-                {m.description}
+              <span className="text-[11px] leading-[1.35]" style={{ color: locked ? '#b0b6c0' : '#6a7180' }}>
+                {locked ? "Coming soon" : m.description}
               </span>
             </button>
           );
