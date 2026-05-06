@@ -27,6 +27,8 @@ interface EditorStore {
   acknowledgeExportSensitivity: () => void;
   setBlurSettings: (s: BlurSettings) => void;
   setRedactSettings: (s: RedactSettings) => void;
+  scanFindings: import('@/types/ai').Finding[] | null;
+  setScanFindings: (findings: import('@/types/ai').Finding[] | null) => void;
 }
 
 const LS_BLUR = "toyosnap_blur_settings";
@@ -100,6 +102,11 @@ export const useEditorStore = create<EditorStore>()(
       localStorage.setItem(LS_REDACT, JSON.stringify(s));
       set((state) => { state.redactSettings = s; });
     },
+    scanFindings: null,
+    setScanFindings: (findings) =>
+      set((state) => {
+        state.scanFindings = findings;
+      }),
     setPixelateSettings: (s) => {
       localStorage.setItem(LS_PIXELATE, JSON.stringify(s));
       set((state) => { state.pixelateSettings = s; });
