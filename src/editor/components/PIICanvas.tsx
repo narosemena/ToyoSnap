@@ -4,6 +4,11 @@ import type { LedgerEntry } from "@/types/ledger";
 import { useEditorStore } from "@/editor/store/editor-store";
 import { usePIIStore } from "@/editor/store/pii-store";
 import { PrimitiveInspector } from "./PrimitiveInspector";
+import { scan } from '@/ai/pii-scanner';
+import { applyReplacements } from '@/ai/svg-text-replacer';
+import type { Finding, SvgReplacement, ProviderConfig } from '@/types/ai';
+import { NoProviderConfiguredError, AuthError, QuotaError, ScanError } from '@/types/ai';
+import { getBlob, putBlob } from '@/storage/ephemeral-db';
 
 interface PIICanvasProps {
   step: CaptureStep | null;
@@ -241,6 +246,19 @@ export function PIICanvas({ step }: PIICanvasProps) {
   const [showRedactDialog, setShowRedactDialog] = useState(false);
   const [showPixelateInspector, setShowPixelateInspector] = useState(false);
 
+  const setScanFindings = useEditorStore((s) => s.setScanFindings);
+  const [aiEnabled, setAiEnabled] = React.useState(false);
+  const [scanState, setScanState] = React.useState<'idle' | 'scanning' | 'error'>('idle');
+  const [scanError, setScanError] = React.useState('');
+  const [cancelController, setCancelController] = React.useState<AbortController | null>(null);
+  const [svgReplacements, setSvgReplacements] = React.useState<SvgReplacement[]>([]);
+
+  React.useEffect(() => {
+    chrome.storage.local.get(['aiEnabled'], (result) => {
+      setAiEnabled(result['aiEnabled'] === true);
+    });
+  }, []);
+
   useEffect(() => {
     if (selectedSvgSelectors && selectedSvgSelectors.length > 0) {
       setCustomSelector(selectedSvgSelectors.join(", "));
@@ -371,8 +389,113 @@ export function PIICanvas({ step }: PIICanvasProps) {
     return numA - numB;
   });
 
+  async function handleScan() {
+    if (!step) return;
+    setScanState('scanning');
+    setScanError('');
+    setScanFindings(null);
+    setSvgReplacements([]);
+
+    const controller = new AbortController();
+    setCancelController(controller);
+
+    try {
+      const config = await new Promise<ProviderConfig>((resolve, reject) => {
+        chrome.storage.local.get(['aiProvider', 'aiProviderConfig'], (result) => {
+          const cfg = result['aiProviderConfig'] as ProviderConfig | undefined;
+          if (!cfg) reject(new NoProviderConfiguredError());
+          else resolve(cfg);
+        });
+      });
+
+      const isSvg = step.mimeType === 'image/svg+xml';
+
+      if (isSvg && step.blobId) {
+        const buffer = await getBlob(step.blobId);
+        if (!buffer) throw new ScanError('Could not load SVG blob');
+        const svgText = new TextDecoder().decode(buffer);
+        const findings = await scan(svgText, config, controller.signal);
+        const replacements: SvgReplacement[] = findings
+          .filter((f) => f.selector && f.currentText)
+          .map((f) => ({
+            selector: f.selector!,
+            currentText: f.currentText!,
+            syntheticReplacement: f.suggestedReplacement,
+            piiType: f.piiType,
+            approved: f.approved,
+          }));
+        setSvgReplacements(replacements);
+      } else if (step.blobId) {
+        const buffer = await getBlob(step.blobId);
+        if (!buffer) throw new ScanError('Could not load image blob');
+        const findings = await scan(buffer, config, controller.signal);
+        setScanFindings(findings);
+      }
+
+      setScanState('idle');
+    } catch (err) {
+      setScanState('error');
+      if (err instanceof NoProviderConfiguredError) {
+        setScanError('Configure an AI provider in extension options');
+      } else if (err instanceof AuthError) {
+        setScanError('API key invalid — check extension options');
+      } else if (err instanceof QuotaError) {
+        setScanError('API quota exceeded — try again later');
+      } else if (err instanceof ScanError) {
+        setScanError(err.message);
+      } else {
+        setScanError('Scan failed');
+      }
+    } finally {
+      setCancelController(null);
+    }
+  }
+
+  async function handleApplySvgReplacements() {
+    if (!step?.blobId) return;
+    const approved = svgReplacements.filter((r) => r.approved);
+    if (approved.length === 0) return;
+    const buffer = await getBlob(step.blobId);
+    if (!buffer) return;
+    const svgText = new TextDecoder().decode(buffer);
+    const patched = applyReplacements(svgText, approved);
+    const patchedBuffer = new TextEncoder().encode(patched).buffer as ArrayBuffer;
+    await putBlob(step.blobId, patchedBuffer);
+    setSvgReplacements([]);
+  }
+
   return (
     <section aria-label="PII redaction canvas">
+      {aiEnabled && (
+        <div className="mb-3">
+          {scanState === 'scanning' ? (
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded-full border-2 border-blue-600 border-t-transparent animate-spin" />
+              <span className="text-xs text-gray-500">Scanning…</span>
+              {cancelController && (
+                <button
+                  type="button"
+                  onClick={() => cancelController.abort()}
+                  className="text-xs text-red-500 hover:underline ml-auto"
+                >
+                  Cancel
+                </button>
+              )}
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => void handleScan()}
+              className="w-full py-2 rounded-lg text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+            >
+              Scan with AI
+            </button>
+          )}
+          {scanState === 'error' && (
+            <p className="mt-1 text-xs text-red-600">{scanError}</p>
+          )}
+        </div>
+      )}
       {/* Tool bar */}
       <div className="space-y-2 mb-3">
         {/* Row 1: Tool toggles + icon Undo/Redo */}
@@ -540,6 +663,70 @@ export function PIICanvas({ step }: PIICanvasProps) {
               Apply
             </button>
           </div>
+        </div>
+      )}
+
+      {svgReplacements.length > 0 && (
+        <div className="mt-4 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              AI Findings
+            </span>
+            <div className="flex gap-1">
+              <button
+                type="button"
+                onClick={() => setSvgReplacements((r) => r.map((x) => ({ ...x, approved: true })))}
+                className="text-[10px] px-1.5 py-0.5 rounded border border-gray-300 hover:bg-gray-50"
+              >
+                Accept All
+              </button>
+              <button
+                type="button"
+                onClick={() => setSvgReplacements((r) => r.map((x) => ({ ...x, approved: false })))}
+                className="text-[10px] px-1.5 py-0.5 rounded border border-gray-300 hover:bg-gray-50"
+              >
+                Clear All
+              </button>
+            </div>
+          </div>
+          <div className="space-y-1.5 max-h-48 overflow-y-auto">
+            {svgReplacements.map((r, i) => (
+              <div key={i} className={['flex items-center gap-1 text-xs rounded p-1', r.approved ? '' : 'opacity-40'].join(' ')}>
+                <span className="font-semibold capitalize text-[10px] w-14 shrink-0 text-gray-500">{r.piiType}</span>
+                <span className="truncate text-gray-700 flex-1">{r.currentText}</span>
+                <span className="text-gray-400 shrink-0">→</span>
+                <input
+                  type="text"
+                  value={r.syntheticReplacement}
+                  onChange={(e) =>
+                    setSvgReplacements((prev) =>
+                      prev.map((x, j) => (j === i ? { ...x, syntheticReplacement: e.target.value } : x))
+                    )
+                  }
+                  className="border border-gray-200 rounded px-1 py-0.5 text-xs w-24 shrink-0"
+                />
+                <button
+                  type="button"
+                  onClick={() => setSvgReplacements((p) => p.map((x, j) => j === i ? { ...x, approved: !x.approved } : x))}
+                  className="text-[11px] w-4 shrink-0 text-center"
+                >
+                  {r.approved ? '✓' : '✗'}
+                </button>
+              </div>
+            ))}
+          </div>
+          <button
+            type="button"
+            disabled={!svgReplacements.some((r) => r.approved)}
+            onClick={() => {
+              if (window.confirm('Apply synthetic replacements to SVG? This cannot be undone.')) {
+                void handleApplySvgReplacements();
+              }
+            }}
+            className="w-full py-1.5 rounded-lg text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            Apply replacements
+          </button>
         </div>
       )}
 
