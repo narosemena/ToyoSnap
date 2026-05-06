@@ -1,14 +1,14 @@
 /**
  * ToyoSnap Manifest V3 Configuration
  * Enforces Zero-Egress isolation via strict Content Security Policy.
+ * NOTE: connect-src includes AI API endpoints — deliberate opt-in for the AI PII scanner feature.
+ * These endpoints are only reached when the user enables AI features in the options page.
  */
 export default {
   manifest_version: 3,
   name: "ToyoSnap",
   version: "0.1.0",
   description: "Zero-Egress WorkflowCapture Engine  -  browser extension for instructional designers",
-  // Top-level icons used by Chrome in the toolbar, extensions page, and CWS listing.
-  // Replace placeholder PNGs with final brand assets before CWS submission.
   icons: {
     "16": "icons/icon16.png",
     "32": "icons/icon32.png",
@@ -26,6 +26,7 @@ export default {
       "128": "icons/icon128.png",
     },
   },
+  options_page: "src/options/options.html",
   background: {
     service_worker: "src/background/service-worker.ts",
     type: "module",
@@ -36,9 +37,9 @@ export default {
       js: ["src/content/content-script.ts"],
     },
   ],
-  // Mandatory Zero-Egress CSP to prevent external data exfiltration
   content_security_policy: {
-    extension_pages: "script-src 'self'; object-src 'self'; connect-src 'self';",
+    extension_pages:
+      "script-src 'self'; object-src 'self'; connect-src 'self' https://api.anthropic.com https://api.openai.com https://*.amazonaws.com;",
   },
   web_accessible_resources: [
     {
