@@ -429,6 +429,9 @@ chrome.tabs.onRemoved.addListener((tabId) => {
 
 // —— Extension install / startup ————————————————————————————————————————————
 
-chrome.runtime.onInstalled.addListener(() => {
+chrome.runtime.onInstalled.addListener(({ reason }) => {
   clearBadge();
+  if (reason === 'install') {
+    void chrome.tabs.create({ url: chrome.runtime.getURL('src/welcome/welcome.html') });
+  }
 });

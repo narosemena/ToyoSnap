@@ -66,7 +66,7 @@ export default defineConfig({
       // Passing the imported manifest object directly
       manifest: () => manifest,
       // Editor page is not a standard MV3 entry point — add it explicitly
-      additionalInputs: ["src/editor/editor.html"],
+      additionalInputs: ["src/editor/editor.html", "src/welcome/welcome.html"],
     }),
     chromeNoUnderscoreFiles(),
     escapeNonCharacters(),
