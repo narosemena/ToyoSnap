@@ -24,6 +24,7 @@ export function Popup() {
     refreshState,
     elapsedMs,
     stepCount,
+    hasSessions,
   } = useSession();
 
   /**
@@ -137,13 +138,15 @@ export function Popup() {
         Start recording
       </button>
 
-      <button
-        type="button"
-        onClick={openEditor}
-        className="w-full py-1.5 rounded-lg text-xs font-medium border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-      >
-        Open Studio
-      </button>
+      {hasSessions && (
+        <button
+          type="button"
+          onClick={openEditor}
+          className="w-full py-1.5 rounded-lg text-xs font-medium border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+        >
+          Open Studio
+        </button>
+      )}
 
       <p className="text-[10px] text-center text-gray-400 dark:text-gray-500">
         Zero-egress · Encrypted at rest

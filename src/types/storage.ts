@@ -19,6 +19,7 @@ export interface IDBSchema {
 // Stored in chrome.storage.session  -  control plane only, never capture data
 export interface SessionControlPlane {
   isRecording: boolean;
+  isPaused?: boolean;
   captureMode: CaptureMode;
   captureCursor: boolean;
   activeSessionId: string;

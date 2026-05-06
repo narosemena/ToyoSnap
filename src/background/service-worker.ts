@@ -20,6 +20,7 @@ import {
   putBlob,
   putDesignSystem,
   getStepsBySession,
+  getAllSessions,
 } from "@/storage/ephemeral-db";
 import type { ExtensionMessage } from "@/types/messages";
 import type { CaptureSession, CaptureMode, CaptureStep } from "@/types/capture";
@@ -75,7 +76,11 @@ chrome.runtime.onMessage.addListener(
       case "GET_SESSION_STATE":
         void (async () => {
           const plane = await getSessionControlPlane();
-          sendResponse(plane || { isRecording: false });
+          const sessions = await getAllSessions();
+          sendResponse({
+            ...(plane || { isRecording: false }),
+            hasSessions: sessions.length > 0,
+          });
         })();
         return true;
 

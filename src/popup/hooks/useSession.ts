@@ -3,6 +3,8 @@ import type { CaptureMode } from '@/types/capture';
 
 export interface SessionState {
   isRecording: boolean;
+  hasSessions?: boolean;
+  isPaused?: boolean;
   activeSessionId?: string;
   recordingStartedAt?: number;
   captureMode?: CaptureMode;
