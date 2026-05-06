@@ -6,6 +6,8 @@ import { StatusBadge } from "./components/StatusBadge";
 import { ImageFormatSelector } from "./components/ImageFormatSelector";
 import { RecordingComplete } from "./components/RecordingComplete";
 import { useSession, formatElapsed } from "./hooks/useSession";
+import { OnboardingPopup } from "./components/OnboardingPopup";
+import { OnboardingTour } from "./components/OnboardingTour";
 import type { CaptureMode } from "@/types/capture";
 import type { ExtensionMessage } from "@/types/messages";
 import "../styles/globals.css";
@@ -27,6 +29,20 @@ export function Popup() {
   const [stoppedSummary, setStoppedSummary] = React.useState<{
     steps: number; durationMs: number; mode: CaptureMode;
   } | null>(null);
+
+  type OnboardingPhase = 'checking' | 'welcome' | 'tour' | 'done';
+  const [onboardPhase, setOnboardPhase] = React.useState<OnboardingPhase>('checking');
+
+  React.useEffect(() => {
+    chrome.storage.local.get('onboardingDone', (result) => {
+      setOnboardPhase(result['onboardingDone'] ? 'done' : 'welcome');
+    });
+  }, []);
+
+  function completeOnboarding() {
+    chrome.storage.local.set({ onboardingDone: true });
+    setOnboardPhase('done');
+  }
 
   // Hook handles global recording state synced with Service Worker
   const {
@@ -86,6 +102,16 @@ export function Popup() {
   const shellShadow: React.CSSProperties = { boxShadow: '0 24px 60px rgba(15,20,35,.14), 0 6px 16px rgba(15,20,35,.06)' };
 
   if (loading) return <div className={shell} style={shellShadow} />;
+
+  if (onboardPhase === 'checking') return null;
+
+  if (onboardPhase === 'welcome') {
+    return <OnboardingPopup onShowTour={() => setOnboardPhase('tour')} onDismiss={completeOnboarding} />;
+  }
+
+  if (onboardPhase === 'tour') {
+    return <OnboardingTour onDone={completeOnboarding} />;
+  }
 
   if (justStopped && stoppedSummary) {
     return (

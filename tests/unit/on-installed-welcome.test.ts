@@ -11,7 +11,11 @@ describe('onInstalled welcome tab', () => {
         sendMessage: vi.fn(),
         lastError: null,
       },
-      tabs: { create: createTab },
+      tabs: { 
+        create: createTab,
+        onUpdated: { addListener: vi.fn() },
+        onRemoved: { addListener: vi.fn() },
+      },
       action: { setBadgeText: vi.fn(), setBadgeBackgroundColor: vi.fn() },
       storage: { session: { setAccessLevel: vi.fn() } },
     });

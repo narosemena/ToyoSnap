@@ -9,7 +9,7 @@ vi.stubGlobal('chrome', {
     lastError: null,
   },
   tabs: { create: vi.fn() },
-  storage: { local: { get: vi.fn((_k: unknown, cb: (r: Record<string, unknown>) => void) => cb({})), set: vi.fn() } },
+  storage: { local: { get: vi.fn((_k: unknown, cb: (r: Record<string, unknown>) => void) => cb({ onboardingDone: true })), set: vi.fn() } },
 });
 
 const { Popup } = await import('@/popup/popup');
