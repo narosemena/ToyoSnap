@@ -9,7 +9,7 @@ import type { CaptureMode } from "@/types/capture";
 import type { ExtensionMessage } from "@/types/messages";
 import "../styles/globals.css";
 
-function Popup() {
+export function Popup() {
   // Local state for configuration BEFORE recording starts
   const [mode, setMode] = React.useState<CaptureMode>("image-chain");
   const [captureCursor, setCaptureCursor] = React.useState(false);
@@ -56,12 +56,15 @@ function Popup() {
     void chrome.tabs.create({ url });
   }
 
-  if (loading) return null;
+  const shell = 'flex flex-col w-[360px] bg-white dark:bg-[#1d2230] text-[#1d2230] dark:text-gray-100 rounded-[14px] border border-[oklch(0.9_0.008_258)] overflow-hidden';
+  const shellShadow: React.CSSProperties = { boxShadow: '0 24px 60px rgba(15,20,35,.14), 0 6px 16px rgba(15,20,35,.06)' };
+
+  if (loading) return <div className={shell} style={shellShadow} />;
 
   // ── Recording state ─────────────────────────────────────────────────────
   if (isRecording) {
     return (
-      <div className="flex flex-col gap-3 p-4 w-60 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+      <div className={shell} style={shellShadow}>
         <div className="flex items-center gap-2">
           <span className="inline-block w-2 h-2 rounded-full bg-[var(--vs-record)] motion-safe:animate-pulse" />
           <span className="text-xs font-semibold uppercase tracking-wide text-[var(--vs-record)]">
@@ -99,7 +102,7 @@ function Popup() {
 
   // ── Idle state ───────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col gap-3 p-4 w-60 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+    <div className={shell} style={shellShadow}>
       <div className="flex items-center gap-2">
         <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
           <defs>
