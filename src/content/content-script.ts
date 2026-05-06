@@ -27,11 +27,13 @@ chrome.runtime.onMessage.addListener(
         break;
 
       case "RESUME_CAPTURE":
-        void startCapture(
-          msg.payload.sessionId,
-          msg.payload.captureMode,
-          msg.payload.captureCursor
-        );
+        if (msg.payload) {
+          void startCapture(
+            msg.payload.sessionId,
+            msg.payload.captureMode,
+            msg.payload.captureCursor
+          );
+        }
         sendResponse({ ok: true });
         break;
 

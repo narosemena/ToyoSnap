@@ -9,6 +9,13 @@ import type { CaptureMode } from "@/types/capture";
 import type { ExtensionMessage } from "@/types/messages";
 import "../styles/globals.css";
 
+const RECORDING_MODE_LABELS: Record<string, string> = {
+  'image-chain': 'PNG chain',
+  'svg': 'Layered SVG',
+  'video': 'Video',
+  'rrweb': 'HTML replay',
+};
+
 export function Popup() {
   // Local state for configuration BEFORE recording starts
   const [mode, setMode] = React.useState<CaptureMode>("image-chain");
@@ -25,6 +32,7 @@ export function Popup() {
     elapsedMs,
     stepCount,
     hasSessions,
+    isPaused,
   } = useSession();
 
   /**
@@ -52,6 +60,11 @@ export function Popup() {
     }
   }
 
+  function handleTogglePause() {
+    const type = (isPaused ? 'RESUME_CAPTURE' : 'PAUSE_CAPTURE') as ExtensionMessage['type'];
+    chrome.runtime.sendMessage({ type } as ExtensionMessage);
+  }
+
   function openEditor() {
     const url = chrome.runtime.getURL("src/editor/editor.html");
     void chrome.tabs.create({ url });
@@ -64,39 +77,112 @@ export function Popup() {
 
   // ── Recording state ─────────────────────────────────────────────────────
   if (isRecording) {
+    const mm = String(Math.floor(elapsedMs / 60000)).padStart(2, '0');
+    const ss = String(Math.floor((elapsedMs % 60000) / 1000)).padStart(2, '0');
+    const modeMeta = RECORDING_MODE_LABELS[captureMode ?? 'image-chain'];
+    const storageMB = ((stepCount ?? 0) * 0.18).toFixed(1);
+
     return (
       <div className={shell} style={shellShadow}>
-        <div className="flex items-center gap-2">
-          <span className="inline-block w-2 h-2 rounded-full bg-[var(--vs-record)] motion-safe:animate-pulse" />
-          <span className="text-xs font-semibold uppercase tracking-wide text-[var(--vs-record)]">
-            Recording
-          </span>
-          <span className="ml-auto text-xs font-mono text-gray-500 dark:text-gray-400">
-            {formatElapsed(elapsedMs)}
-          </span>
+        <div className="flex items-center gap-[10px] border-b border-[oklch(0.94_0.005_258)]" style={{ padding: '14px 16px 10px' }}>
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+            <defs>
+              <linearGradient id="vs-rec-logo" x1="0" y1="0" x2="20" y2="20" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stopColor="oklch(0.62 0.19 258)"/>
+                <stop offset="100%" stopColor="oklch(0.58 0.19 25)"/>
+              </linearGradient>
+            </defs>
+            <rect width="20" height="20" rx="5" fill="url(#vs-rec-logo)"/>
+            <path d="M5 10h10M10 5v10" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
+          </svg>
+          <span className="text-sm font-semibold" style={{ color: '#1d2230' }}>ToyoSnap</span>
+          <StatusBadge isRecording={true} isPaused={isPaused ?? false} />
         </div>
 
-        <div className="flex items-center justify-between rounded-lg bg-gray-50 dark:bg-gray-800 px-3 py-2.5">
-          <span className="text-xs text-gray-500 dark:text-gray-400">
-            {captureMode === "svg" ? "SVG Layers" : "Screenshot Chain"}
-          </span>
-          <span className="text-xs font-mono font-semibold tabular-nums text-gray-700 dark:text-gray-300">
-            {String(stepCount ?? 0).padStart(2, "0")} steps
-          </span>
+        <div className="flex flex-col gap-[14px]" style={{ padding: '14px 16px 16px' }}>
+          <div
+            className="rounded-[12px] p-[14px]"
+            style={{
+              background: 'linear-gradient(180deg, oklch(0.98 0.02 258) 0%, #fff 100%)',
+              border: '1px solid oklch(0.92 0.02 258)',
+            }}
+          >
+            <div className="flex justify-between items-end">
+              <div>
+                <div className="text-[10px] font-semibold uppercase tracking-[0.6px]" style={{ color: '#6a7180' }}>
+                  Elapsed
+                </div>
+                <div className="text-[28px] font-semibold leading-none mt-1" style={{ fontVariantNumeric: 'tabular-nums', color: '#1d2230' }}>
+                  {mm}:{ss}
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-[10px] font-semibold uppercase tracking-[0.6px]" style={{ color: '#6a7180' }}>
+                  Steps captured
+                </div>
+                <div className="text-[28px] font-semibold leading-none mt-1" style={{ fontVariantNumeric: 'tabular-nums', color: 'oklch(0.38 0.14 258)' }}>
+                  {String(stepCount ?? 0).padStart(2, '0')}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-[10px] p-[10px] text-xs" style={{ background: '#f7f8fa' }}>
+            <div className="flex items-center justify-between py-1">
+              <span style={{ color: '#6a7180' }}>Mode</span>
+              <span className="font-semibold">{modeMeta}</span>
+            </div>
+            <div className="flex items-center justify-between py-1">
+              <span style={{ color: '#6a7180' }}>Cursor</span>
+              <span className="font-semibold">{activeCursor ? 'Captured' : 'Hidden'}</span>
+            </div>
+            <div className="flex items-center justify-between py-1">
+              <span style={{ color: '#6a7180' }}>Storage</span>
+              <span className="font-semibold" style={{ fontVariantNumeric: 'tabular-nums' }}>{storageMB} MB</span>
+            </div>
+          </div>
+
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={handleTogglePause}
+              className="flex-1 py-[10px] rounded-[10px] text-[13px] font-semibold flex items-center justify-center transition-colors"
+              style={{
+                background: '#fff',
+                border: '1px solid oklch(0.9 0.008 258)',
+                color: '#1d2230',
+              }}
+            >
+              {isPaused ? 'Resume' : 'Pause'}
+            </button>
+            <button
+              type="button"
+              onClick={handleToggleRecord}
+              className="flex-[1.4] py-[10px] rounded-[10px] text-[13px] font-semibold text-white flex items-center justify-center transition-opacity hover:opacity-90"
+              style={{ background: 'oklch(0.58 0.19 25)' }}
+            >
+              Stop &amp; review
+            </button>
+          </div>
         </div>
 
-        <button
-          type="button"
-          onClick={handleToggleRecord}
-          className="w-full py-2 rounded-lg text-sm font-semibold text-white transition-opacity hover:opacity-90"
-          style={{ background: "var(--vs-record)" }}
+        <div
+          className="flex items-center gap-2 px-4 py-[10px] text-[11px]"
+          style={{
+            borderTop: '1px solid oklch(0.94 0.005 258)',
+            background: 'oklch(0.985 0.005 258)',
+            color: '#6a7180',
+          }}
         >
-          Stop recording
-        </button>
-
-        <p className="text-[10px] text-center text-gray-400 dark:text-gray-500">
-          Encrypted at rest · Zero-egress
-        </p>
+          <svg width="12" height="12" viewBox="0 0 20 20" fill="none"
+            stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"
+            strokeLinejoin="round" aria-hidden="true"
+          >
+            <rect x="3" y="9" width="14" height="9" rx="2"/>
+            <path d="M7 9V7a3 3 0 016 0v2"/>
+          </svg>
+          Captured locally · {stepCount ?? 0} step{(stepCount ?? 0) === 1 ? '' : 's'} encrypted
+        </div>
       </div>
     );
   }

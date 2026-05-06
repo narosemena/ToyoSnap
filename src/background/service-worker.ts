@@ -99,6 +99,22 @@ chrome.runtime.onMessage.addListener(
         sendResponse({ status: "stopping" });
         break;
 
+      case "PAUSE_CAPTURE":
+        void (async () => {
+          await setSessionControlPlane({ isPaused: true });
+          await broadcastStateUpdate();
+        })();
+        sendResponse({ ok: true });
+        break;
+
+      case "RESUME_CAPTURE":
+        void (async () => {
+          await setSessionControlPlane({ isPaused: false });
+          await broadcastStateUpdate();
+        })();
+        sendResponse({ ok: true });
+        break;
+
       case "TRIGGER_CAPTURE_VISIBLE_TAB":
         void handleCaptureVisibleTab(sendResponse);
         return true;
