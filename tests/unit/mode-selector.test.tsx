@@ -15,8 +15,8 @@ describe('ModeSelector', () => {
   it('calls onChange with correct CaptureMode value', async () => {
     const onChange = vi.fn();
     render(<ModeSelector value="image-chain" onChange={onChange} disabled={false} />);
-    await userEvent.click(screen.getByRole('radio', { name: /video/i }));
-    expect(onChange).toHaveBeenCalledWith('video');
+    await userEvent.click(screen.getByRole('radio', { name: /Layered SVG/i }));
+    expect(onChange).toHaveBeenCalledWith('svg');
   });
 
   it('does not show Screenshot Chain label', () => {

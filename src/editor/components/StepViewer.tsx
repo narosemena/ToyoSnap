@@ -4,6 +4,7 @@ import type { LedgerEntry } from "@/types/ledger";
 import { getBlob, getStep, updateStepPageTitle } from "@/storage/ephemeral-db";
 import { useEditorStore } from "@/editor/store/editor-store";
 import { usePIIStore } from "@/editor/store/pii-store";
+import { ScanOverlay } from './ScanOverlay';
 import rrwebPlayer, { type RRwebPlayerOptions } from "rrweb-player";
 import "rrweb-player/dist/style.css";
 
@@ -774,6 +775,39 @@ export function StepViewer({ step, onStepUpdated }: StepViewerProps) {
   const [labelDraft, setLabelDraft] = useState("");
   const labelInputRef = useRef<HTMLInputElement>(null);
 
+  const scanFindings = useEditorStore((s) => s.scanFindings);
+  const setScanFindings = useEditorStore((s) => s.setScanFindings);
+  const activeTool = useEditorStore((s) => s.activeTool);
+  const { applyOperation } = usePIIStore();
+  const activeSessionId = useEditorStore((s) => s.activeSessionId);
+  const activeStepIndex = useEditorStore((s) => s.activeStepIndex);
+
+  async function handleApplyFindings(
+    approved: import('@/types/ai').Finding[],
+    tool: import('@/types/ledger').PIIOperationType,
+  ) {
+    if (!activeSessionId) return;
+    const stepId = String(activeStepIndex);
+    for (const f of approved) {
+      const entry: LedgerEntry = {
+        id: crypto.randomUUID(),
+        operationType: tool,
+        rrwebId: null,
+        elementSelector: '',
+        region: f.region,
+        blurRadius: tool === 'blur' ? 8 : null,
+        pixelCellSize: tool === 'pixelate' ? 8 : null,
+        redactColor: tool === 'redact' ? '#000000' : null,
+        applyGlobally: false,
+        replacementText: '[REDACTED]',
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      };
+      await applyOperation(entry, 'local', activeSessionId, stepId);
+    }
+    setScanFindings(null);
+  }
+
   useEffect(() => {
     if (!step) { setFullStep(null); return; }
     setLoading(true);
@@ -869,11 +903,23 @@ export function StepViewer({ step, onStepUpdated }: StepViewerProps) {
             ? <VideoViewer blobId={fullStep.blobId} />
             : fullStep.mimeType === "image/svg+xml"
               ? <SvgViewer blobId={fullStep.blobId} step={fullStep} />
-              : <ImageViewer
-                  blobId={fullStep.blobId}
-                  mimeType={fullStep.mimeType ?? "image/png"}
-                  step={fullStep}
-                />
+              : (
+                <div className="relative w-full">
+                  <ImageViewer
+                    blobId={fullStep.blobId}
+                    mimeType={fullStep.mimeType ?? "image/png"}
+                    step={fullStep}
+                  />
+                  {scanFindings && scanFindings.length > 0 && (
+                    <ScanOverlay
+                      findings={scanFindings}
+                      activeTool={activeTool}
+                      onApply={(approved, tool) => void handleApplyFindings(approved, tool)}
+                      onDismiss={() => setScanFindings(null)}
+                    />
+                  )}
+                </div>
+              )
         )}
         {!hasRrweb && !hasBlob && (
           <div className="flex items-center justify-center h-48 text-sm text-gray-500 dark:text-gray-400">
