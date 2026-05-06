@@ -1,30 +1,30 @@
 import React, { useRef } from "react";
 import type { CaptureMode } from "@/types/capture";
 
-const MODES: { value: CaptureMode; label: string; description: string; icon: React.ReactNode }[] = [
+const MODES: { value: CaptureMode; label: string; description: string; iconPath: string }[] = [
   {
     value: "image-chain",
-    label: "Screenshot Chain",
-    description: "Raster snapshot on each click",
-    icon: (
-      <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor"
-        strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <rect x="2" y="4" width="16" height="12" rx="2"/>
-        <circle cx="10" cy="10" r="3"/>
-      </svg>
-    ),
+    label: "PNG chain",
+    description: "Screenshots on each click — ready for step guides.",
+    iconPath: "M3 5h14a1 1 0 011 1v8a1 1 0 01-1 1H3a1 1 0 01-1-1V6a1 1 0 011-1zm7 3a2 2 0 100 4 2 2 0 000-4z",
   },
   {
     value: "svg",
-    label: "SVG Layers",
-    description: "Vector capture on each click",
-    icon: (
-      <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor"
-        strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <path d="M4 14l4-8 4 8"/><path d="M6 10h4"/>
-        <path d="M14 6l2 2-2 2"/>
-      </svg>
-    ),
+    label: "Layered SVG",
+    description: "Vector layers per click — editable in any vector tool.",
+    iconPath: "M4 14l4-8 4 8M6 10h4M14 6l2 2-2 2",
+  },
+  {
+    value: "video",
+    label: "Video",
+    description: "WebM recording of the tab.",
+    iconPath: "M15 10l-6-4v8l6-4zM3 6h8a1 1 0 011 1v6a1 1 0 01-1 1H3a1 1 0 01-1-1V7a1 1 0 011-1z",
+  },
+  {
+    value: "rrweb",
+    label: "HTML replay",
+    description: "Self-contained interactive replay.",
+    iconPath: "M4 4h12a1 1 0 011 1v10a1 1 0 01-1 1H4a1 1 0 01-1-1V5a1 1 0 011-1zm0 3h12M7 4v3",
   },
 ];
 
@@ -55,7 +55,12 @@ export function ModeSelector({ value, onChange, disabled }: Props) {
 
   return (
     <div role="radiogroup" aria-label="Capture mode">
-      <p className="text-xs font-medium mb-1.5 text-gray-500 dark:text-gray-400">Capture mode</p>
+      <span
+        className="block text-[10px] font-semibold tracking-[0.6px] uppercase mb-2"
+        style={{ color: '#6a7180' }}
+      >
+        Capture mode
+      </span>
       <div className="grid grid-cols-2 gap-2">
         {MODES.map((m, i) => {
           const active = value === m.value;
@@ -72,17 +77,37 @@ export function ModeSelector({ value, onChange, disabled }: Props) {
               onClick={() => onChange(m.value)}
               onKeyDown={(e) => handleKeyDown(e, i)}
               className={[
-                "flex flex-col items-start gap-1.5 rounded-lg border p-2.5 text-left transition-colors",
-                "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--vs-accent)]",
+                "relative flex flex-col gap-1 p-[10px] rounded-[10px] border text-left transition-all duration-[160ms]",
+                "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2",
                 "disabled:opacity-40 disabled:cursor-not-allowed",
                 active
-                  ? "border-[var(--vs-accent)] bg-[var(--vs-accent-soft)] text-[var(--vs-accent)]"
-                  : "border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800",
+                  ? "border-[oklch(0.58_0.19_258)] bg-[oklch(0.97_0.035_258)]"
+                  : "border-[oklch(0.9_0.008_258)] bg-white hover:bg-[oklch(0.985_0.005_258)]",
               ].join(" ")}
             >
-              {m.icon}
-              <span className="text-xs font-semibold leading-tight">{m.label}</span>
-              <span className="text-[10px] leading-tight opacity-70">{m.description}</span>
+              {active && (
+                <span
+                  className="absolute top-[6px] right-2 text-[9px] font-bold tracking-[0.4px] uppercase px-[5px] py-[2px] rounded-[4px] text-white"
+                  style={{ background: 'oklch(0.58 0.19 258)' }}
+                >
+                  On
+                </span>
+              )}
+              <div
+                className="flex items-center gap-[7px] text-[13px] font-semibold whitespace-nowrap"
+                style={{ color: active ? 'oklch(0.38 0.14 258)' : '#1d2230' }}
+              >
+                <svg width="15" height="15" viewBox="0 0 20 20" fill="none"
+                  stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"
+                  strokeLinejoin="round" aria-hidden="true"
+                >
+                  <path d={m.iconPath} />
+                </svg>
+                {m.label}
+              </div>
+              <span className="text-[11px] leading-[1.35]" style={{ color: '#6a7180' }}>
+                {m.description}
+              </span>
             </button>
           );
         })}
