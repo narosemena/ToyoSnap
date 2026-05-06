@@ -132,9 +132,12 @@ export function Popup() {
       <button
         type="button"
         onClick={handleToggleRecord}
-        className="w-full py-2 rounded-lg text-sm font-semibold text-white transition-opacity hover:opacity-90 mt-1"
-        style={{ background: "var(--vs-accent)" }}
+        className="w-full py-[12px] px-[14px] rounded-[10px] text-sm font-semibold text-white transition-all flex items-center justify-center gap-2 mt-1"
+        style={{ background: 'oklch(0.58 0.19 258)' }}
       >
+        <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+          <circle cx="6" cy="6" r="4" fill="white"/>
+        </svg>
         Start recording
       </button>
 
@@ -148,9 +151,23 @@ export function Popup() {
         </button>
       )}
 
-      <p className="text-[10px] text-center text-gray-400 dark:text-gray-500">
-        Zero-egress · Encrypted at rest
-      </p>
+      <div
+        className="flex items-center gap-2 px-4 py-[10px] text-[11px]"
+        style={{
+          borderTop: '1px solid oklch(0.94 0.005 258)',
+          background: 'oklch(0.985 0.005 258)',
+          color: '#6a7180',
+        }}
+      >
+        <svg width="12" height="12" viewBox="0 0 20 20" fill="none"
+          stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"
+          strokeLinejoin="round" aria-hidden="true"
+        >
+          <rect x="3" y="9" width="14" height="9" rx="2"/>
+          <path d="M7 9V7a3 3 0 016 0v2"/>
+        </svg>
+        All capture stays on this machine. No network calls.
+      </div>
     </div>
   );
 }
