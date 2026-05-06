@@ -64,16 +64,17 @@ export class SvgCapture implements BaseCapture {
       const width = window.innerWidth;
       const height = window.innerHeight;
 
-      // --- DOM Pruning: Mark off-screen elements for removal ---
-      // We iterate the live DOM and mark elements that are completely outside the viewport.
-      // This allows us to physically remove them from the SVG after capture.
+      // --- DOM Pruning: Hide off-screen elements via display:none ---
+      // We iterate the live DOM and hide elements that are completely outside the viewport.
+      // This is more reliable than attribute-marking as dom-to-svg respects display:none.
+      const hiddenElements: Array<{ el: HTMLElement; originalDisplay: string }> = [];
       const allElements = document.querySelectorAll("body *");
-      const markedElements: Element[] = [];
       
       for (let i = 0; i < allElements.length; i++) {
-        const el = allElements[i];
+        const el = allElements[i] as HTMLElement;
         // Skip elements that might be important or are the overlay itself
         if (el.id === "toyosnap-overlay-host") continue;
+        if (typeof el.style === "undefined") continue; // Skip non-HTMLElement/SVGElement nodes
         
         const rect = el.getBoundingClientRect();
         // Check if element is completely off-screen
@@ -84,8 +85,8 @@ export class SvgCapture implements BaseCapture {
           rect.left > width;
 
         if (isOffScreen && rect.width > 0 && rect.height > 0) {
-          el.setAttribute("data-ts-prune", "true");
-          markedElements.push(el);
+          hiddenElements.push({ el, originalDisplay: el.style.display });
+          el.style.display = "none";
         }
       }
 
@@ -97,34 +98,34 @@ export class SvgCapture implements BaseCapture {
       let disabledSheets: CSSStyleSheet[] = [];
 
       try {
-        svgDocument = documentToSVG(document, { width, height });
-      } catch (parseError) {
-        console.warn("[ToyoSnap SVG] First pass failed, likely due to modern CSS syntax. Disabling stylesheets and retrying.", parseError);
-        
-        // Find and disable all stylesheets to bypass the CSS parser crash
-        for (let i = 0; i < document.styleSheets.length; i++) {
-          const sheet = document.styleSheets[i];
-          if (!sheet.disabled) {
-            sheet.disabled = true;
-            disabledSheets.push(sheet);
+        try {
+          svgDocument = documentToSVG(document);
+        } catch (parseError) {
+          console.warn("[ToyoSnap SVG] First pass failed, likely due to modern CSS syntax. Disabling stylesheets and retrying.", parseError);
+          
+          // Find and disable all stylesheets to bypass the CSS parser crash
+          for (let i = 0; i < document.styleSheets.length; i++) {
+            const sheet = document.styleSheets[i];
+            if (!sheet.disabled) {
+              sheet.disabled = true;
+              disabledSheets.push(sheet);
+            }
+          }
+          
+          // Retry capture without stylesheets (structural only)
+          try {
+            svgDocument = documentToSVG(document);
+          } finally {
+            // ALWAYS restore stylesheets immediately after retry, even if it fails again
+            disabledSheets.forEach(sheet => { sheet.disabled = false; });
           }
         }
-        
-        // Retry capture without stylesheets (structural only)
-        try {
-          svgDocument = documentToSVG(document, { width, height });
-        } finally {
-          // ALWAYS restore stylesheets immediately after retry, even if it fails again
-          disabledSheets.forEach(sheet => { sheet.disabled = false; });
-        }
+      } finally {
+        // ALWAYS restore original display values for all elements, even if capture threw
+        hiddenElements.forEach(({ el, originalDisplay }) => {
+          el.style.display = originalDisplay;
+        });
       }
-
-      // --- Cleanup: Remove marked elements from SVG and Live DOM ---
-      const svgPruneTargets = svgDocument.querySelectorAll('[data-ts-prune="true"]');
-      svgPruneTargets.forEach(el => el.remove());
-      
-      // Remove marks from live DOM immediately
-      markedElements.forEach(el => el.removeAttribute("data-ts-prune"));
 
       const svgElement = svgDocument.documentElement as unknown as SVGElement;
 
