@@ -133,6 +133,34 @@ export class SvgCapture implements BaseCapture {
       svgElement.setAttribute("viewBox", `0 0 ${width} ${height}`);
       svgElement.removeAttribute("width");
       svgElement.removeAttribute("height");
+      // overflow:hidden is advisory in browsers but respected by Illustrator
+      svgElement.setAttribute("overflow", "hidden");
+
+      // Hard viewport clip — applied to all captured content so that Adobe Illustrator
+      // (and any other SVG tool) only sees elements within the visible window.
+      // Setting viewBox alone is not enough: tools render every node in the document
+      // regardless of whether it falls inside the viewBox.
+      const svgNS = "http://www.w3.org/2000/svg";
+      const defs = svgDocument.createElementNS(svgNS, "defs");
+      const clipPath = svgDocument.createElementNS(svgNS, "clipPath");
+      clipPath.setAttribute("id", "toyosnap-vp-clip");
+      const clipRect = svgDocument.createElementNS(svgNS, "rect");
+      clipRect.setAttribute("x", "0");
+      clipRect.setAttribute("y", "0");
+      clipRect.setAttribute("width", String(width));
+      clipRect.setAttribute("height", String(height));
+      clipPath.appendChild(clipRect);
+      defs.appendChild(clipPath);
+
+      // Wrap all existing SVG children in a clipped group, then re-append
+      const contentGroup = svgDocument.createElementNS(svgNS, "g");
+      contentGroup.setAttribute("clip-path", "url(#toyosnap-vp-clip)");
+      // Move all current children (the dom-to-svg output) into the clipped group
+      while (svgElement.firstChild) {
+        contentGroup.appendChild(svgElement.firstChild);
+      }
+      svgElement.appendChild(defs);
+      svgElement.appendChild(contentGroup);
 
       this.addLayers(svgElement);
 
