@@ -2,8 +2,8 @@ import React, { useEffect, useRef, useState as useS } from "react";
 import { createRoot } from "react-dom/client";
 import { useEditorStore } from "./store/editor-store";
 import { usePIIStore } from "./store/pii-store";
-import { getAllSessions, getStepsBySession, purgeSession } from "@/storage/ephemeral-db";
-import { getAllGlobalLedgerEntries } from "@/storage/ephemeral-db";
+import { getAllSessions, getStepsBySession, purgeSession, purgeExpiredSessions } from "@/storage/ephemeral-db";
+import { getAllGlobalLedgerEntries, getLocalLedgerEntriesBySession } from "@/storage/ephemeral-db";
 import type { CaptureSession, CaptureStep } from "@/types/capture";
 import { LiveAnnouncer } from "./components/LiveAnnouncer";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -81,6 +81,10 @@ function Editor() {
     useEditorStore();
   const { loadOperations } = usePIIStore();
   const [sessions, setSessions] = React.useState<CaptureSession[]>([]);
+  const [editingId, setEditingId] = React.useState<string | null>(null);
+  const [editName, setEditName] = React.useState("");
+  const editInputRef = useRef<HTMLInputElement>(null);
+
   const [steps, setSteps] = React.useState<CaptureStep[]>([]);
   const handleStepUpdated = React.useCallback((updated: CaptureStep) =>
     setSteps((prev) => prev.map((s) =>
@@ -96,33 +100,48 @@ function Editor() {
   const leftPanel = usePanelResize(240, 160, 400, "right");
   const rightPanel = usePanelResize(300, 220, 480, "left");
 
-  // Load steps when active session changes
+  // Load steps and operations when active session changes
   useEffect(() => {
-    if (!activeSessionId) { setSteps([]); return; }
+    if (!activeSessionId) { 
+      setSteps([]); 
+      loadOperations([]); 
+      return; 
+    }
     void getStepsBySession(activeSessionId).then(setSteps);
-  }, [activeSessionId]);
+    void Promise.all([
+      getAllGlobalLedgerEntries(),
+      getLocalLedgerEntriesBySession(activeSessionId)
+    ]).then(([globals, locals]) => {
+      loadOperations([...globals, ...locals]);
+    });
+  }, [activeSessionId, loadOperations]);
 
   // Initialization — sequential per plan: editor-store first, then pii-store
   useEffect(() => {
     void (async () => {
-      // Step 1: load sessions
-      const allSessions = await getAllSessions();
+      // Step 1: load sessions (sorted latest first)
+      await purgeExpiredSessions();
+      const allSessions = (await getAllSessions()).sort((a, b) => b.startedAt - a.startedAt);
       setSessions(allSessions);
 
       // Pick the session from URL param or most recent
       const urlParams = new URLSearchParams(location.search);
       const paramId = urlParams.get("session");
-      const target = paramId ?? allSessions[allSessions.length - 1]?.id ?? null;
+      const target = paramId ?? allSessions[0]?.id ?? null;
       if (target) setActiveSession(target);
 
-      // Step 2: load ledger for active session
-      const ledgerEntries = await getAllGlobalLedgerEntries();
-      loadOperations(ledgerEntries);
-
-      // Step 3: mark hydrated — UI renders from this point
+      // Step 2: mark hydrated — UI renders from this point
       setHydrated(true);
     })();
-  }, []);
+  }, [setActiveSession, setHydrated]);
+
+  // Focus rename input when editing starts
+  useEffect(() => {
+    if (editingId && editInputRef.current) {
+      editInputRef.current.focus();
+      editInputRef.current.select();
+    }
+  }, [editingId]);
 
   // Global keyboard shortcuts
   useEffect(() => {
@@ -142,6 +161,7 @@ function Editor() {
       }
       if (e.key === "Escape") {
         useEditorStore.getState().setActiveTool(null);
+        setEditingId(null);
       }
     }
     document.addEventListener("keydown", onKey);
@@ -163,7 +183,7 @@ function Editor() {
     setCheckedIds((prev) => { const n = new Set(prev); n.delete(sessionId); return n; });
     setOpenMenuId(null);
     if (activeSessionId === sessionId) {
-      setActiveSession(remaining[remaining.length - 1]?.id ?? null);
+      setActiveSession(remaining[0]?.id ?? null);
     }
   }
 
@@ -173,7 +193,7 @@ function Editor() {
     setSessions(remaining);
     setCheckedIds(new Set());
     if (activeSessionId && checkedIds.has(activeSessionId)) {
-      setActiveSession(remaining[remaining.length - 1]?.id ?? null);
+      setActiveSession(remaining[0]?.id ?? null);
     }
   }
 
@@ -183,6 +203,26 @@ function Editor() {
       n.has(id) ? n.delete(id) : n.add(id);
       return n;
     });
+  }
+
+  async function handleRename(id: string) {
+    const trimmed = editName.trim();
+    if (!trimmed) { setEditingId(null); return; }
+
+    const session = sessions.find((s) => s.id === id);
+    if (session) {
+      const updated = { ...session, name: trimmed };
+      await putSession(updated);
+      setSessions((prev) => prev.map((s) => (s.id === id ? updated : s)));
+    }
+    setEditingId(null);
+    setOpenMenuId(null);
+  }
+
+  function startRename(session: CaptureSession) {
+    setEditingId(session.id);
+    setEditName(session.name ?? "");
+    setOpenMenuId(null);
   }
 
   return (
@@ -267,15 +307,36 @@ function Editor() {
                         <li key={s.id} className="group flex items-center gap-1">
                           <input type="checkbox" checked={checkedIds.has(s.id)} onChange={() => toggleCheck(s.id)}
                             className="shrink-0 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 cursor-pointer"
-                            aria-label={`Select session ${new Date(s.startedAt).toLocaleString()}`} />
-                          <button type="button" onClick={() => setActiveSession(s.id)}
-                            className={["flex-1 min-w-0 text-left px-2 py-1.5 rounded text-xs truncate transition-colors",
-                              activeSessionId === s.id ? "bg-blue-600 text-white" : "hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"].join(" ")}>
-                            <span className="block truncate font-medium capitalize">{s.mode}</span>
-                            <span className={["block truncate", activeSessionId === s.id ? "text-blue-200" : "text-gray-400 dark:text-gray-500"].join(" ")}>
-                              {new Date(s.startedAt).toLocaleString()}
-                            </span>
-                          </button>
+                            aria-label={`Select session ${s.name || new Date(s.startedAt).toLocaleString()}`} />
+                          
+                          {editingId === s.id ? (
+                            <div className="flex-1 flex items-center gap-1 px-1 py-0.5">
+                              <input
+                                ref={editInputRef}
+                                type="text"
+                                value={editName}
+                                onChange={(e) => setEditName(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") void handleRename(s.id);
+                                  if (e.key === "Escape") setEditingId(null);
+                                }}
+                                onBlur={() => void handleRename(s.id)}
+                                className="flex-1 min-w-0 px-1 py-0.5 text-xs border border-blue-500 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none"
+                              />
+                            </div>
+                          ) : (
+                            <button type="button" onClick={() => setActiveSession(s.id)}
+                              className={["flex-1 min-w-0 text-left px-2 py-1.5 rounded text-xs truncate transition-colors",
+                                activeSessionId === s.id ? "bg-blue-600 text-white" : "hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"].join(" ")}>
+                              <span className="block truncate font-medium capitalize">
+                                {s.name || s.mode}
+                              </span>
+                              <span className={["block truncate", activeSessionId === s.id ? "text-blue-200" : "text-gray-400 dark:text-gray-500"].join(" ")}>
+                                {new Date(s.startedAt).toLocaleString()}
+                              </span>
+                            </button>
+                          )}
+
                           <div className="relative shrink-0">
                             <button type="button"
                               onClick={(e) => { e.stopPropagation(); setOpenMenuId(openMenuId === s.id ? null : s.id); }}
@@ -287,6 +348,10 @@ function Editor() {
                             </button>
                             {openMenuId === s.id && (
                               <div role="menu" className="absolute right-0 top-full mt-1 z-30 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg py-1 min-w-[110px]" onClick={(e) => e.stopPropagation()}>
+                                <button role="menuitem" type="button" onClick={() => startRename(s)}
+                                  className="w-full text-left px-3 py-1.5 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                                  Rename
+                                </button>
                                 <button role="menuitem" type="button" onClick={() => void deleteOne(s.id)}
                                   className="w-full text-left px-3 py-1.5 text-xs text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
                                   Delete
@@ -302,6 +367,9 @@ function Editor() {
               </nav>
 
               <div className="mt-auto space-y-3 shrink-0">
+                <div className="px-3 py-2 text-[10px] text-center text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                  Sessions are automatically deleted after 30 days.
+                </div>
                 <StorageUsage />
                 <KeyboardShortcutsHint />
               </div>

@@ -15,6 +15,7 @@ export interface ActionStep {
 
 export interface CaptureSession {
   id: string;
+  name?: string; // User-customizable session name
   mode: CaptureMode;
   startedAt: number;
   endedAt: number | null;

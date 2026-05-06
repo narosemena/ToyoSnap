@@ -49,12 +49,18 @@ function clearBadge(): void {
  */
 async function broadcastStateUpdate() {
   const plane = await getSessionControlPlane();
-  chrome.runtime.sendMessage({
+  const msg = {
     type: "SESSION_UPDATED",
     payload: plane || { isRecording: false },
-  }).catch(() => {
-    // Expected error if no UI listeners are active
-  });
+  };
+
+  // 1. Broadcast to extension UI (Popup, Studio)
+  chrome.runtime.sendMessage(msg).catch(() => {});
+
+  // 2. Broadcast to the active tab (Recording Overlay)
+  if (plane?.activeTabId) {
+    chrome.tabs.sendMessage(plane.activeTabId, msg).catch(() => {});
+  }
 }
 
 // —— Message handler ————————————————————————————————————————————————————————
@@ -114,10 +120,13 @@ chrome.runtime.onMessage.addListener(
               spotlightSelector: null,
             };
             await putStep(step);
-            // Keep stepCount in sync for rrweb sessions (same partial-update pattern).
+            // Update step count and ensure we're targeting the correct tab for broadcasts
             const hasSession = await getSessionControlPlane();
-            if (hasSession) {
-              await setSessionControlPlane({ stepCount: stepIndex });
+            if (hasSession && hasSession.activeSessionId === sessionId) {
+              await setSessionControlPlane({ 
+                stepCount: stepIndex,
+                activeTabId: sender.tab?.id ?? hasSession.activeTabId 
+              });
               await broadcastStateUpdate();
             }
           })();
@@ -155,11 +164,13 @@ chrome.runtime.onMessage.addListener(
               rrwebEvents: null, actionStep: null, spotlightSelector: null,
             };
             await putStep(step);
-            // setSessionControlPlane accepts a partial update and merges internally,
-            // so we only pass stepCount — no extra read needed, avoiding a TOCTOU window.
+            // Update step count and ensure we're targeting the correct tab for broadcasts
             const hasSession = await getSessionControlPlane();
-            if (hasSession) {
-              await setSessionControlPlane({ stepCount: stepIndex });
+            if (hasSession && hasSession.activeSessionId === sessionId) {
+              await setSessionControlPlane({ 
+                stepCount: stepIndex,
+                activeTabId: sender.tab?.id ?? hasSession.activeTabId 
+              });
               await broadcastStateUpdate();
             }
             sendResponse({ ok: true });
@@ -191,11 +202,13 @@ chrome.runtime.onMessage.addListener(
               rrwebEvents: null, actionStep: null, spotlightSelector: null,
             };
             await putStep(step);
-            // setSessionControlPlane accepts a partial update and merges internally,
-            // so we only pass stepCount — no extra read needed, avoiding a TOCTOU window.
+            // Update step count and ensure we're targeting the correct tab for broadcasts
             const hasSession = await getSessionControlPlane();
-            if (hasSession) {
-              await setSessionControlPlane({ stepCount: stepIndex });
+            if (hasSession && hasSession.activeSessionId === sessionId) {
+              await setSessionControlPlane({ 
+                stepCount: stepIndex,
+                activeTabId: sender.tab?.id ?? hasSession.activeTabId 
+              });
               await broadcastStateUpdate();
             }
             sendResponse({ ok: true });
@@ -232,7 +245,7 @@ chrome.runtime.onMessage.addListener(
       }
 
       default:
-        if (process.env.NODE_ENV === "development") {
+        if (import.meta.env.DEV) {
           console.warn("[ToyoSnap SW] unhandled message type:", msg.type);
         }
     }
@@ -267,6 +280,7 @@ async function handleStartCapture(
     activeSessionId: sessionId,
     recordingStartedAt: Date.now(),
     activeTabId: targetTabId,
+    stepCount: 0,
   });
 
   const session: CaptureSession = {

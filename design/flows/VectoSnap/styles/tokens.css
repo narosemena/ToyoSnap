@@ -1,0 +1,107 @@
+/* VectoSnap design tokens */
+:root {
+  /* Accent — indigo-blue */
+  --vs-accent: oklch(0.62 0.19 255);
+  --vs-accent-hover: oklch(0.56 0.2 255);
+  --vs-accent-soft: oklch(0.96 0.03 255);
+  --vs-accent-border: oklch(0.88 0.06 255);
+
+  /* Neutrals — cool tone */
+  --vs-bg: oklch(0.99 0.003 250);
+  --vs-surface: #ffffff;
+  --vs-surface-2: oklch(0.975 0.004 250);
+  --vs-border: oklch(0.92 0.005 250);
+  --vs-border-strong: oklch(0.86 0.006 250);
+  --vs-text: oklch(0.22 0.01 250);
+  --vs-text-soft: oklch(0.44 0.01 250);
+  --vs-text-dim: oklch(0.62 0.01 250);
+
+  /* Semantic */
+  --vs-record: oklch(0.6 0.22 25);
+  --vs-record-soft: oklch(0.95 0.04 25);
+  --vs-success: oklch(0.62 0.15 155);
+  --vs-warn: oklch(0.72 0.17 75);
+
+  /* Shadows */
+  --vs-shadow-sm: 0 1px 2px rgba(15, 20, 40, 0.06);
+  --vs-shadow-md: 0 4px 16px rgba(15, 20, 40, 0.08), 0 1px 2px rgba(15, 20, 40, 0.04);
+  --vs-shadow-lg: 0 24px 64px rgba(15, 20, 40, 0.18), 0 2px 8px rgba(15, 20, 40, 0.06);
+  --vs-shadow-popup: 0 24px 48px rgba(15, 20, 40, 0.22), 0 2px 8px rgba(15, 20, 40, 0.08), 0 0 0 0.5px rgba(15, 20, 40, 0.1);
+
+  /* Type */
+  --vs-font-ui: 'Inter', -apple-system, system-ui, sans-serif;
+  --vs-font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+
+  /* Radii */
+  --vs-r-sm: 6px;
+  --vs-r: 8px;
+  --vs-r-md: 10px;
+  --vs-r-lg: 12px;
+  --vs-r-xl: 16px;
+
+  /* Motion */
+  --vs-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--vs-font-ui);
+  color: var(--vs-text);
+  background: var(--vs-bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+button { font-family: inherit; }
+
+/* Reusable */
+.vs-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 9px 14px;
+  border-radius: var(--vs-r);
+  border: 1px solid var(--vs-border);
+  background: var(--vs-surface);
+  color: var(--vs-text);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 180ms var(--vs-ease);
+}
+.vs-btn:hover { border-color: var(--vs-border-strong); background: var(--vs-surface-2); }
+.vs-btn:focus-visible { outline: 2px solid var(--vs-accent); outline-offset: 2px; }
+
+.vs-btn-primary {
+  background: var(--vs-accent);
+  color: white;
+  border-color: var(--vs-accent);
+}
+.vs-btn-primary:hover { background: var(--vs-accent-hover); border-color: var(--vs-accent-hover); }
+
+.vs-btn-danger {
+  background: var(--vs-record);
+  color: white;
+  border-color: var(--vs-record);
+}
+.vs-btn-danger:hover { filter: brightness(0.95); }
+
+.vs-btn-ghost { border-color: transparent; background: transparent; }
+.vs-btn-ghost:hover { background: var(--vs-surface-2); border-color: var(--vs-border); }
+
+.vs-pulse { animation: vs-pulse 1.6s ease-in-out infinite; }
+@keyframes vs-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.55; transform: scale(0.85); }
+}
+
+.vs-scroll::-webkit-scrollbar { width: 10px; height: 10px; }
+.vs-scroll::-webkit-scrollbar-thumb { background: var(--vs-border-strong); border-radius: 8px; border: 2px solid transparent; background-clip: padding-box; }
+.vs-scroll::-webkit-scrollbar-track { background: transparent; }
+
+@keyframes vs-fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.vs-fade-in { animation: vs-fade-in 280ms var(--vs-ease) both; }

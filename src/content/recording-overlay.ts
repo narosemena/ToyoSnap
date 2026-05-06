@@ -19,6 +19,14 @@ export function incrementStepCount(): void {
   showToast(`Step ${stepCount} captured`);
 }
 
+export function hideOverlay(): void {
+  if (host) host.style.display = "none";
+}
+
+export function showOverlay(): void {
+  if (host) host.style.display = "";
+}
+
 export function mountOverlay(captureMode: string, onStop: () => void): void {
   if (host) return;
 
@@ -30,6 +38,18 @@ export function mountOverlay(captureMode: string, onStop: () => void): void {
   host.id = "vs-overlay-host";
   document.body.appendChild(host);
   shadow = host.attachShadow({ mode: "open" });
+
+  // Fetch initial step count and start time from the Service Worker
+  chrome.runtime.sendMessage({ type: "GET_SESSION_STATE" }, (response) => {
+    if (response && response.stepCount !== undefined) {
+      stepCount = response.stepCount;
+      const el = shadow?.getElementById("vs-steps");
+      if (el) el.textContent = String(stepCount).padStart(2, "0");
+    }
+    if (response && response.recordingStartedAt) {
+      startTime = response.recordingStartedAt;
+    }
+  });
 
   const style = document.createElement("style");
   style.textContent = STYLES;
@@ -79,6 +99,19 @@ export function mountOverlay(captureMode: string, onStop: () => void): void {
   pill.appendChild(stopBtn);
 
   shadow.appendChild(pill);
+
+  // Listen for step count updates from the Service Worker
+  chrome.runtime.onMessage.addListener((msg) => {
+    if (msg.type === "SESSION_UPDATED" && msg.payload.stepCount !== undefined) {
+      const newCount = msg.payload.stepCount;
+      if (newCount > stepCount) {
+        stepCount = newCount;
+        const el = shadow?.getElementById("vs-steps");
+        if (el) el.textContent = String(stepCount).padStart(2, "0");
+        showToast(`Step ${stepCount} captured`);
+      }
+    }
+  });
 
   shadow.getElementById("vs-stop")?.addEventListener("click", () => {
     unmountOverlay();

@@ -19,6 +19,7 @@
  * password masking (bullet characters) is preserved in the screenshot.
  */
 import type { BaseCapture } from "./base-capture";
+import { hideOverlay, showOverlay } from "../content/recording-overlay";
 
 export class RrwebCapture implements BaseCapture {
   private sessionId: string;
@@ -51,13 +52,25 @@ export class RrwebCapture implements BaseCapture {
   }
 
   private async captureScreenshot(): Promise<void> {
-    await chrome.runtime.sendMessage({
-      type: "CAPTURE_IMAGE_STEP",
-      payload: {
-        sessionId: this.sessionId,
-        url: location.href,
-        pageTitle: document.title,
-      },
-    });
+    if (!chrome.runtime?.id) {
+      console.warn("[ToyoSnap Rrweb] Extension context invalidated, stopping capture.");
+      return;
+    }
+
+    hideOverlay();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    try {
+      await chrome.runtime.sendMessage({
+        type: "CAPTURE_IMAGE_STEP",
+        payload: {
+          sessionId: this.sessionId,
+          url: location.href,
+          pageTitle: document.title,
+        },
+      });
+    } finally {
+      showOverlay();
+    }
   }
 }

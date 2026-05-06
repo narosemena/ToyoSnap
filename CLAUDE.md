@@ -252,6 +252,13 @@ At the end of every task, report:
 
 ---
 
+## Design references
+- `design/flows/VectoSnap Flows.html` — happy-path UX flows (A/B/E/F)
+- Per-flow JSX mocks in `design/flows/components/flow-*.jsx`
+- Treat these as the source of truth for layout, copy, and primitive customization affordances
+
+---
+
 ## Environment & Configuration
 
 No environment variables are required or permitted. The extension is fully self-contained. There is no `.env` file. If a `.env` file appears, it is a mistake — do not commit it.
@@ -307,3 +314,60 @@ Recommended GitHub Actions pipeline (each step gates the next):
 - Do not use `innerHTML` in template injection.
 - Security test suite must pass before any other suite.
 - Update this `CLAUDE.md` whenever project structure, workflows, or conventions change materially.
+
+---
+
+## Gemini Edits
+
+**Session Summary: Layout, Capture Stability, Database Optimization, and Studio Polish**
+
+The following fixes and enhancements were implemented by the Gemini CLI agent:
+
+### 1. UI & Layout Fixes
+- **Popup Centering**: Fixed an issue where the extension popup content was left-aligned by updating the main React container in `src/popup/popup.tsx` to use `w-full` instead of a fixed `w-60` width.
+- **Overlay Visibility**: Ensured the hovering recording banner (`recording-overlay.ts`) is explicitly hidden just before capturing an image using `chrome.tabs.captureVisibleTab`, and restored immediately after. This prevents the "Step X captured" pill from appearing in final PNG/JPEG exports.
+
+### 2. Capture Timing & Logic ("Before and After" Flow)
+- **1 Click = 2 Captures**: Restructured both `ImageCapture` and `SvgCapture` to immediately capture the state *before* the click takes effect, and then capture again after a forced delay.
+- **Timing Adjustment**: Standardized the "after-click" delay to `2000ms` across all capture modes to guarantee UI transitions and network requests complete before snapping.
+- **Initial Capture**: Added a `1000ms - 2000ms` delay on startup (depending on `document.readyState`) to ensure the first page is fully rendered, preventing "blank" step #1 captures.
+- **Duplicate Prevention**: Removed redundant capture triggers from `stop()` and `captureStep()` lifecycle methods.
+
+### 3. SVG Capture Dimensions
+- **Viewport Clipping Fix**: Explicitly passed `window.innerWidth` and `window.innerHeight` to the `documentToSVG` method in `svg-capture.ts`. This ensures the resulting SVG strictly reflects the visible viewport without capturing off-screen elements or clipping the right side.
+
+### 4. Overlay Synchronization
+- **Tab Targeting**: Updated the Service Worker (`service-worker.ts`) to broadcast `SESSION_UPDATED` messages specifically to the active tab (`activeTabId`) so the in-page recording overlay receives real-time updates.
+- **State Hydration**: Updated `recording-overlay.ts` to request the initial `stepCount` and `recordingStartedAt` from the Service Worker upon mounting. This ensures the counter survives cross-domain navigations and page reloads.
+
+### 5. Studio Session Management
+- **Sorting**: Modified `editor.tsx` to always list recorded sessions in the sidebar in reverse chronological order (Latest First) based on `startedAt`.
+- **Renaming**: Added a `name` property to the `CaptureSession` interface (`src/types/capture.ts`). Implemented an inline-editing flow in `editor.tsx` allowing users to rename sessions via the 3-dot context menu.
+
+### 6. IndexedDB Performance (O(N) -> O(1))
+- **Schema Migration**: Bumped `DB_VERSION` to `2` in `src/lib/idb.ts`.
+- **Indexing**: During the upgrade, added a `sessionId` index to both the `steps` and `localLedger` object stores. Fixed a critical `TypeError` during migration by using the provided `transaction` object.
+- **Query Optimization**: Updated `getStepsBySession`, `countStepsBySession`, and `getLocalLedgerEntriesBySession` in `ephemeral-db.ts` to use `db.getAllFromIndex` and `db.countFromIndex`, completely eliminating the O(N) full-table scans that bottlenecked the Service Worker.
+
+### 7. Background Service Worker Resilience
+- **process.env Fix**: Removed an unsafe `process.env.NODE_ENV` check in `service-worker.ts` that caused synchronous `ReferenceError` crashes, replacing it with Vite's safe `import.meta.env.DEV`.
+- **Context Invalidation**: Added `chrome.runtime?.id` validation checks before attempting to send messages from content scripts (`svg-capture.ts`, `image-capture.ts`, `rrweb-capture.ts`) to prevent "Extension context invalidated" errors if the extension updates or reloads mid-capture.
+
+### 8. 30-Day Retention Policy
+- **Automatic Purging**: Implemented `purgeExpiredSessions()` in `ephemeral-db.ts` to automatically delete any recorded sessions (and associated blobs/ledgers) older than 30 days. This runs on Studio initialization.
+- **UI Notification**: Added a persistent notification block to the bottom of the left sidebar informing users of the retention policy.
+
+### 9. SVG Redaction Tools Enabled
+- **Tool Access**: Removed the hardcoded block in `PIICanvas.tsx` that disabled redaction tools for SVGs. 
+- **Contextual UI**: Conditionally restricted the "Custom CSS selector" input and "Detected elements" list to *only* appear when the active step is `image/svg+xml`, hiding them during pixel-based (PNG/JPEG) captures where they are irrelevant.
+
+### 10. SVG-Native Redaction & Multi-Selection
+- **Inline Rendering**: Introduced a specialized `SvgViewer` component in `StepViewer.tsx` that renders captured SVGs inline instead of inside an `<img>` tag, allowing direct DOM interaction.
+- **Disabled Interactivity**: Intercepted `onClickCapture` events to prevent native SVG links or buttons from triggering unintended navigation while viewing captures in the Studio.
+- **Click-and-Drag Multi-Selection**: Replaced single-click selection with a drag-to-select bounding box. Any SVG element intersecting the drawn rectangle is added to a `selectedSvgSelectors` array and visually highlighted with a blue outline.
+- **Inline Text Editing**: Double-clicking an SVG `<text>` or `<tspan>` node spawns an absolutely positioned HTML `<input>` over the element. Pressing Enter commits the replacement text directly to the ledger.
+- **Operation Grouping**: Refactored the `PIICanvas.tsx` right sidebar to fetch local ledger entries correctly on session switch and group the history of applied redactions by Step (e.g., Global, Step 1, Step 2).
+
+### 11. Adobe Illustrator Compatibility
+- **Image Inlining**: Added a post-processing routine to `svg-capture.ts`. It detects external `<image>` tags, fetches the asset via `fetch()`, and embeds it as a base64 Data URL. 
+- **Fallback**: If the fetch fails (due to CORS or timeouts), it converts the relative URL to an absolute HTTP URL. This completely resolves the "Missing linked file" error when opening ToyoSnap SVGs locally in Adobe Illustrator.

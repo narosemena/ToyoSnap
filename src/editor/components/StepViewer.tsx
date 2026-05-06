@@ -479,6 +479,292 @@ function VideoViewer({ blobId }: { blobId: string }) {
   );
 }
 
+// ——— SvgViewer ————————————————————————————————————————————————————————————
+
+function SvgViewer({ blobId, step }: { blobId: string; step: CaptureStep }) {
+  const [svgContent, setSvgContent] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const { selectedSvgSelectors, setSelectedSvgSelectors } = useEditorStore();
+  const { appliedOperations, applyOperation } = usePIIStore();
+  const [inlineEdit, setInlineEdit] = useState<{ selector: string, text: string, rect: DOMRect } | null>(null);
+  const [updateTick, setUpdateTick] = useState(0);
+
+  const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
+  const [dragCurrent, setDragCurrent] = useState<{ x: number; y: number } | null>(null);
+
+  useEffect(() => {
+    setLoading(true);
+    void getBlob(blobId).then((buf) => {
+      if (buf) {
+        const text = new TextDecoder().decode(new Uint8Array(buf));
+        setSvgContent(text);
+      } else {
+        setSvgContent(null);
+      }
+      setLoading(false);
+    });
+  }, [blobId]);
+
+  useEffect(() => {
+    const handleResize = () => setUpdateTick(t => t + 1);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  // Update layout when operations change (forces re-eval of bounding boxes)
+  useEffect(() => {
+    setUpdateTick(t => t + 1);
+  }, [appliedOperations]);
+
+  function getRelPos(e: React.MouseEvent) {
+    if (!containerRef.current) return null;
+    const rect = containerRef.current.getBoundingClientRect();
+    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+  }
+
+  function handleMouseDownCapture(e: React.MouseEvent<HTMLDivElement>) {
+    // Intercept clicks to prevent links/buttons from triggering navigation or actions
+    e.preventDefault();
+    if (inlineEdit) return;
+    const pos = getRelPos(e);
+    if (pos) setDragStart(pos);
+  }
+
+  function handleMouseMoveCapture(e: React.MouseEvent<HTMLDivElement>) {
+    if (!dragStart) return;
+    const pos = getRelPos(e);
+    if (pos) setDragCurrent(pos);
+  }
+
+  function handleMouseUpCapture(e: React.MouseEvent<HTMLDivElement>) {
+    if (!dragStart) return;
+    const end = getRelPos(e) ?? dragStart;
+    
+    const x = Math.min(dragStart.x, end.x);
+    const y = Math.min(dragStart.y, end.y);
+    const w = Math.abs(end.x - dragStart.x);
+    const h = Math.abs(end.y - dragStart.y);
+
+    setDragStart(null);
+    setDragCurrent(null);
+
+    // If it's just a click (or tiny movement)
+    if (w < 2 && h < 2) {
+      const target = e.target as Element;
+      if (!target || target === containerRef.current || target.tagName.toLowerCase() === "svg" || target.tagName.toLowerCase() === "g") {
+        setSelectedSvgSelectors([]);
+        return;
+      }
+      const selector = getCssSelector(target);
+      setSelectedSvgSelectors([selector]);
+      return;
+    }
+
+    // It's a drag selection
+    if (!containerRef.current) return;
+    const contRect = containerRef.current.getBoundingClientRect();
+    const dragClient = {
+       left: contRect.left + x,
+       top: contRect.top + y,
+       right: contRect.left + x + w,
+       bottom: contRect.top + y + h
+    };
+
+    const allElements = containerRef.current.querySelectorAll("*");
+    const newSelectors: string[] = [];
+    
+    // Select elements intersecting the drag rectangle
+    for (let i = 0; i < allElements.length; i++) {
+       const el = allElements[i];
+       const tag = el.tagName.toLowerCase();
+       // Skip structural tags
+       if (tag === "svg" || tag === "g" || tag === "div" || tag === "style" || tag === "defs") continue;
+       
+       const rect = el.getBoundingClientRect();
+       if (rect.width === 0 || rect.height === 0) continue;
+
+       // Intersection test
+       if (
+         rect.left <= dragClient.right &&
+         rect.right >= dragClient.left &&
+         rect.top <= dragClient.bottom &&
+         rect.bottom >= dragClient.top
+       ) {
+         newSelectors.push(getCssSelector(el));
+       }
+    }
+    
+    setSelectedSvgSelectors(newSelectors);
+  }
+
+  function handleDoubleClickCapture(e: React.MouseEvent<HTMLDivElement>) {
+    e.preventDefault();
+    const target = e.target as Element;
+    if (target && (target.tagName.toLowerCase() === "text" || target.tagName.toLowerCase() === "tspan")) {
+      const selector = getCssSelector(target);
+      setSelectedSvgSelectors([selector]);
+      setInlineEdit({
+        selector,
+        text: target.textContent || "",
+        rect: target.getBoundingClientRect(),
+      });
+    }
+  }
+
+  async function commitInlineEdit(newText: string) {
+    if (!inlineEdit || !step.sessionId) return;
+    if (newText.trim() && newText !== inlineEdit.text) {
+      const entry: LedgerEntry = {
+        id: crypto.randomUUID(),
+        operationType: "redact",
+        rrwebId: null,
+        elementSelector: inlineEdit.selector,
+        applyGlobally: false,
+        replacementText: newText,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      };
+      await applyOperation(entry, "local", step.sessionId, String(step.stepIndex));
+    }
+    setInlineEdit(null);
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-48 text-sm text-gray-500 dark:text-gray-400 motion-safe:animate-pulse">
+        Loading SVG…
+      </div>
+    );
+  }
+  if (!svgContent) {
+    return (
+      <div className="flex items-center justify-center h-48 text-sm text-red-500">
+        Failed to load SVG asset.
+      </div>
+    );
+  }
+
+  const containerRect = containerRef.current?.getBoundingClientRect();
+  const selectedRects: DOMRect[] = [];
+  
+  if (selectedSvgSelectors && selectedSvgSelectors.length > 0 && containerRef.current) {
+    selectedSvgSelectors.forEach(sel => {
+      try {
+        const el = containerRef.current?.querySelector(sel);
+        if (el) selectedRects.push(el.getBoundingClientRect());
+      } catch {}
+    });
+  }
+
+  const stepOps = appliedOperations.filter(op => op.stepIndex == null || op.stepIndex === step.stepIndex);
+
+  const liveRect =
+    dragStart && dragCurrent
+      ? {
+          x: Math.min(dragStart.x, dragCurrent.x),
+          y: Math.min(dragStart.y, dragCurrent.y),
+          w: Math.abs(dragCurrent.x - dragStart.x),
+          h: Math.abs(dragCurrent.y - dragStart.y),
+        }
+      : null;
+
+  return (
+    <div 
+      className="relative w-full rounded overflow-hidden select-none group" 
+      ref={containerRef} 
+      onMouseDownCapture={handleMouseDownCapture}
+      onMouseMoveCapture={handleMouseMoveCapture}
+      onMouseUpCapture={handleMouseUpCapture}
+      onClickCapture={(e) => e.preventDefault()}
+      onDoubleClickCapture={handleDoubleClickCapture}
+      onMouseLeave={() => { setDragStart(null); setDragCurrent(null); }}
+    >
+      <div className="w-full h-auto pointer-events-auto" dangerouslySetInnerHTML={{ __html: svgContent }} />
+
+      {containerRect && stepOps.map(op => {
+        if (!op.elementSelector) return null;
+        try {
+          const el = containerRef.current?.querySelector(op.elementSelector);
+          if (!el) return null;
+          
+          if (op.operationType === "redact" && op.replacementText) {
+             if (el.tagName.toLowerCase() === "text" || el.tagName.toLowerCase() === "tspan") {
+                 el.textContent = op.replacementText;
+                 return null;
+             }
+          }
+
+          const rect = el.getBoundingClientRect();
+          const style: React.CSSProperties = {
+            position: "absolute",
+            left: rect.left - containerRect.left,
+            top: rect.top - containerRect.top,
+            width: rect.width,
+            height: rect.height,
+            pointerEvents: "none",
+            borderRadius: "4px",
+          };
+
+          if (op.operationType === "blur") {
+             style.backdropFilter = `blur(${op.blurRadius || 8}px)`;
+             style.backgroundColor = "rgba(59,130,246,0.1)";
+          } else if (op.operationType === "pixelate") {
+             // Use high blur as fallback for pixelate overlay
+             style.backdropFilter = `blur(${op.pixelCellSize || 8}px)`;
+          } else if (op.operationType === "redact") {
+             style.backgroundColor = op.redactColor || "#000";
+          }
+
+          return <div key={op.id} style={style} />;
+        } catch { return null; }
+      })}
+
+      {containerRect && selectedRects.map((rect, i) => (
+        <div
+          key={i}
+          className="absolute border-2 border-blue-500 bg-blue-500/10 pointer-events-none rounded transition-all duration-75"
+          style={{
+            left: rect.left - containerRect.left - 2,
+            top: rect.top - containerRect.top - 2,
+            width: rect.width + 4,
+            height: rect.height + 4,
+          }}
+        />
+      ))}
+
+      {liveRect && (
+        <div
+          className="absolute border-2 border-blue-400 bg-blue-400/20 pointer-events-none rounded"
+          style={{
+            left: liveRect.x,
+            top: liveRect.y,
+            width: liveRect.w,
+            height: liveRect.h,
+          }}
+        />
+      )}
+
+      {inlineEdit && containerRect && (
+        <input
+          autoFocus
+          type="text"
+          defaultValue={inlineEdit.text}
+          onBlur={(e) => void commitInlineEdit(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); if (e.key === "Escape") setInlineEdit(null); }}
+          className="absolute z-20 px-1 border-2 border-blue-500 bg-white text-black text-sm outline-none shadow-lg rounded pointer-events-auto"
+          style={{
+            left: inlineEdit.rect.left - containerRect.left - 2,
+            top: inlineEdit.rect.top - containerRect.top - 2,
+            minWidth: Math.max(inlineEdit.rect.width, 150) + 4,
+            height: Math.max(inlineEdit.rect.height, 28) + 4,
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
 // ——— StepViewer ——————————————————————————————————————————————————————————
 
 export function StepViewer({ step, onStepUpdated }: StepViewerProps) {
@@ -581,11 +867,13 @@ export function StepViewer({ step, onStepUpdated }: StepViewerProps) {
         {!hasRrweb && hasBlob && fullStep.blobId && (
           isVideo
             ? <VideoViewer blobId={fullStep.blobId} />
-            : <ImageViewer
-                blobId={fullStep.blobId}
-                mimeType={fullStep.mimeType ?? "image/png"}
-                step={fullStep}
-              />
+            : fullStep.mimeType === "image/svg+xml"
+              ? <SvgViewer blobId={fullStep.blobId} step={fullStep} />
+              : <ImageViewer
+                  blobId={fullStep.blobId}
+                  mimeType={fullStep.mimeType ?? "image/png"}
+                  step={fullStep}
+                />
         )}
         {!hasRrweb && !hasBlob && (
           <div className="flex items-center justify-center h-48 text-sm text-gray-500 dark:text-gray-400">

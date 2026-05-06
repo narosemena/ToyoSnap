@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>VectoSnap — Happy Path Flows</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+<style>
+  :root{
+    --accent: oklch(0.58 0.19 258);
+    --accent-weak: oklch(0.96 0.035 258);
+    --accent-border: oklch(0.88 0.06 258);
+    --accent-ink: oklch(0.38 0.14 258);
+    --bg: oklch(0.995 0.003 250);
+    --surface: #ffffff;
+    --surface-2: oklch(0.985 0.005 250);
+    --line: oklch(0.93 0.006 250);
+    --line-2: oklch(0.89 0.008 250);
+    --ink: oklch(0.22 0.02 255);
+    --ink-dim: oklch(0.44 0.015 255);
+    --ink-mute: oklch(0.60 0.01 255);
+    --danger: oklch(0.58 0.19 25);
+    --danger-weak: oklch(0.96 0.035 25);
+    --success: oklch(0.62 0.14 155);
+    --warn: oklch(0.72 0.15 80);
+    --radius: 10px;
+    --radius-sm: 6px;
+    --radius-lg: 14px;
+    --shadow-sm: 0 1px 2px rgba(15,20,35,.04), 0 1px 1px rgba(15,20,35,.03);
+    --shadow-md: 0 6px 18px rgba(15,20,35,.08), 0 2px 4px rgba(15,20,35,.04);
+    --shadow-lg: 0 24px 60px rgba(15,20,35,.14), 0 6px 16px rgba(15,20,35,.06);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:'Inter',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  body{min-height:100vh}
+  .mono{font-family:'JetBrains Mono',ui-monospace,monospace;font-feature-settings:"ss01","cv11"}
+  button{font:inherit;color:inherit;cursor:pointer;border:0;background:none;padding:0}
+  button:focus-visible, a:focus-visible, [role=button]:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+  ::selection{background:var(--accent-weak);color:var(--accent-ink)}
+  #root{min-height:100vh}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="components/icons.jsx"></script>
+<script type="text/babel" src="components/chrome.jsx"></script>
+<script type="text/babel" src="components/host-page.jsx"></script>
+<script type="text/babel" src="components/popup.jsx"></script>
+<script type="text/babel" src="components/studio.jsx"></script>
+<script type="text/babel" src="components/flow-a.jsx"></script>
+<script type="text/babel" src="components/flow-b.jsx"></script>
+<script type="text/babel" src="components/flow-e.jsx"></script>
+<script type="text/babel" src="components/flow-f.jsx"></script>
+<script type="text/babel" src="components/app.jsx"></script>
+</body>
+</html>

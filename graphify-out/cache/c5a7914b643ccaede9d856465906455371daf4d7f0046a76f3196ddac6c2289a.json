@@ -1,0 +1,1 @@
+{"nodes": [{"id": "capture", "label": "capture.ts", "file_type": "code", "source_file": "src\\types\\capture.ts", "source_location": "L1"}], "edges": [{"source": "capture", "target": "types", "relation": "imports_from", "confidence": "EXTRACTED", "source_file": "src\\types\\capture.ts", "source_location": "L1", "weight": 1.0}]}

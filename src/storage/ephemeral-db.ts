@@ -46,6 +46,26 @@ export async function purgeSession(sessionId: string): Promise<void> {
   await db.delete("sessions", sessionId);
 }
 
+/** 
+ * Automatically purges sessions that are older than 30 days.
+ * Returns the number of purged sessions.
+ */
+export async function purgeExpiredSessions(): Promise<number> {
+  const sessions = await getAllSessions();
+  const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+  const now = Date.now();
+  let count = 0;
+
+  for (const session of sessions) {
+    if (now - session.startedAt > thirtyDaysMs) {
+      await purgeSession(session.id);
+      count++;
+    }
+  }
+  
+  return count;
+}
+
 // â"€â"€ Steps â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 
 export async function putStep(step: CaptureStep): Promise<void> {
@@ -91,13 +111,11 @@ export async function getStep(
 
 export async function getStepsBySession(sessionId: string): Promise<CaptureStep[]> {
   const db = await getDB();
-  const all = await db.getAll("steps");
-  return all.filter((s) => s.sessionId === sessionId).sort((a, b) => a.stepIndex - b.stepIndex);
+  return db.getAllFromIndex("steps", "sessionId", sessionId);
 }
-
 export async function countStepsBySession(sessionId: string): Promise<number> {
-  const steps = await getStepsBySession(sessionId);
-  return steps.length;
+  const db = await getDB();
+  return db.countFromIndex("steps", "sessionId", sessionId);
 }
 
 /** Patches only the pageTitle of a stored step without re-encrypting rrweb data. */
@@ -182,10 +200,7 @@ export async function getLocalLedgerEntry(
 /** Returns all local ledger entries for a given session (any step). */
 export async function getLocalLedgerEntriesBySession(sessionId: string): Promise<LedgerEntry[]> {
   const db = await getDB();
-  return db.getAll(
-    "localLedger",
-    IDBKeyRange.bound([sessionId], [sessionId, "\uffff", "\uffff"])
-  ) as unknown as LedgerEntry[];
+  return db.getAllFromIndex("localLedger", "sessionId", sessionId) as unknown as LedgerEntry[];
 }
 
 // â"€â"€ Design Systems â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€

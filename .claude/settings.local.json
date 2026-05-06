@@ -32,7 +32,32 @@
       "Bash(python -X utf8 \"C:/Users/norma/.claude/skills/antigravity-awesome-skills/plugins/antigravity-bundle-web-designer/skills/ui-ux-pro-max/scripts/search.py\" \"professional dark minimal tool\" --domain style -n 8)",
       "Bash(python -c \"import sys,json; [print\\(e.get\\('content',''\\)\\) for e in json.load\\(sys.stdin\\) if e.get\\('type'\\)=='tool_result']\")",
       "Bash(python -X utf8 \"C:/Users/norma/.claude/skills/antigravity-awesome-skills/plugins/antigravity-bundle-web-designer/skills/ui-ux-pro-max/scripts/search.py\" \"productivity tool professional dark\" --domain color -n 8)",
-      "mcp__claude_ai_Figma__generate_diagram"
+      "mcp__claude_ai_Figma__generate_diagram",
+      "Bash(pip install *)",
+      "Bash(semgrep --version)",
+      "Bash(semgrep --config=p/owasp-top-ten src/)",
+      "Bash(xargs ls *)",
+      "Bash(grep *)",
+      "Bash(python -c \"import graphify\")",
+      "Bash(python -c \"import sys; open\\('.graphify_python', 'w'\\).write\\(sys.executable\\)\")",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(gh api *)",
+      "Bash(curl *)",
+      "Bash(cp \"C:/Users/norma/Downloads/toyosnap-test-scaffold/toyosnap-test-scaffold/docs/TEST-STRATEGY.md\" \"F:/ToyoSnap/ToyoSnap/docs/TEST-STRATEGY.md\")",
+      "Bash(cp \"C:/Users/norma/Downloads/toyosnap-test-scaffold/toyosnap-test-scaffold/docs/REGRESSION-TEST-CASES.md\" \"F:/ToyoSnap/ToyoSnap/docs/REGRESSION-TEST-CASES.md\")",
+      "Bash(cp \"C:/Users/norma/Downloads/toyosnap-test-scaffold/toyosnap-test-scaffold/docs/USER-TESTING-PROTOCOL.md\" \"F:/ToyoSnap/ToyoSnap/docs/USER-TESTING-PROTOCOL.md\")",
+      "Bash(cp \"C:/Users/norma/Downloads/toyosnap-test-scaffold/toyosnap-test-scaffold/docs/INFOSEC-EVIDENCE-PACKAGE.md\" \"F:/ToyoSnap/ToyoSnap/docs/INFOSEC-EVIDENCE-PACKAGE.md\")",
+      "Bash(cp \"C:/Users/norma/Downloads/toyosnap-test-scaffold/toyosnap-test-scaffold/templates/TESTER-BRIEF.md\" \"F:/ToyoSnap/ToyoSnap/templates/TESTER-BRIEF.md\")",
+      "Bash(cp \"C:/Users/norma/Downloads/toyosnap-test-scaffold/toyosnap-test-scaffold/templates/OBSERVATION-LOG.md\" \"F:/ToyoSnap/ToyoSnap/templates/OBSERVATION-LOG.md\")",
+      "Bash(cp \"C:/Users/norma/Downloads/toyosnap-test-scaffold/toyosnap-test-scaffold/templates/FEEDBACK-FORM.md\" \"F:/ToyoSnap/ToyoSnap/templates/FEEDBACK-FORM.md\")",
+      "Bash(cp \"C:/Users/norma/Downloads/toyosnap-test-scaffold/toyosnap-test-scaffold/templates/FIX-TICKET.md\" \"F:/ToyoSnap/ToyoSnap/templates/FIX-TICKET.md\")",
+      "Bash(npm audit *)",
+      "Bash(awk '{print $9, \"\\(\" $5 \"\\)\"}')",
+      "Bash(git worktree *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(d.get\\('exports', {}\\).get\\('./matchers', 'NOT FOUND'\\)\\)\")",
+      "Bash(git *)"
     ]
   }
 }

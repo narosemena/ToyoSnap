@@ -10,6 +10,7 @@ interface EditorStore {
   activeSessionId: string | null;
   activeStepIndex: number;
   activeTool: "blur" | "redact" | "pixelate" | null;
+  selectedSvgSelectors: string[];
   previewMode: CaptureMode;
   isHydrated: boolean;
   exportSensitivityAcknowledged: boolean;
@@ -19,6 +20,7 @@ interface EditorStore {
   setActiveSession: (id: string | null) => void;
   setActiveStep: (index: number) => void;
   setActiveTool: (tool: "blur" | "redact" | "pixelate" | null) => void;
+  setSelectedSvgSelectors: (selectors: string[]) => void;
   setPixelateSettings: (s: PixelateSettings) => void;
   setPreviewMode: (mode: CaptureMode) => void;
   setHydrated: (v: boolean) => void;
@@ -49,6 +51,7 @@ export const useEditorStore = create<EditorStore>()(
     activeSessionId: null,
     activeStepIndex: 0,
     activeTool: null,
+    selectedSvgSelectors: [],
     previewMode: "rrweb",
     isHydrated: false,
     exportSensitivityAcknowledged: false,
@@ -60,16 +63,22 @@ export const useEditorStore = create<EditorStore>()(
       set((state) => {
         state.activeSessionId = id;
         state.activeStepIndex = 0;
+        state.selectedSvgSelectors = [];
         state.exportSensitivityAcknowledged = false;
       }),
 
     setActiveStep: (index) =>
       set((state) => {
         state.activeStepIndex = index;
+        state.selectedSvgSelectors = [];
       }),
     setActiveTool: (tool) =>
       set((state) => {
         state.activeTool = tool;
+      }),
+    setSelectedSvgSelectors: (selectors) =>
+      set((state) => {
+        state.selectedSvgSelectors = selectors;
       }),
     setPreviewMode: (mode) =>
       set((state) => {

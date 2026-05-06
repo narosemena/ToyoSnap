@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import type { CaptureStep } from "@/types/capture";
 import type { LedgerEntry } from "@/types/ledger";
 import { useEditorStore } from "@/editor/store/editor-store";
@@ -232,6 +232,7 @@ export function PIICanvas({ step }: PIICanvasProps) {
     activeTool, setActiveTool, activeSessionId,
     blurSettings, redactSettings, pixelateSettings,
     setBlurSettings, setRedactSettings, setPixelateSettings,
+    selectedSvgSelectors,
   } = useEditorStore();
   const { applyOperation, undo, redo, appliedOperations, undoStack, redoStack } = usePIIStore();
   const [scope, setScope] = useState<"local" | "global">("local");
@@ -240,31 +241,16 @@ export function PIICanvas({ step }: PIICanvasProps) {
   const [showRedactDialog, setShowRedactDialog] = useState(false);
   const [showPixelateInspector, setShowPixelateInspector] = useState(false);
 
+  useEffect(() => {
+    if (selectedSvgSelectors && selectedSvgSelectors.length > 0) {
+      setCustomSelector(selectedSvgSelectors.join(", "));
+    }
+  }, [selectedSvgSelectors]);
+
   if (!step || !activeSessionId) {
     return (
       <div className="flex items-center justify-center h-24 text-sm text-gray-500 dark:text-gray-400">
         Select a step to apply PII redactions.
-      </div>
-    );
-  }
-
-  // SVG recordings are vector files — redact downstream in an SVG editor
-  if (step.mimeType === "image/svg+xml") {
-    return (
-      <div className="rounded-lg border border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 p-4">
-        <div className="flex items-start gap-3">
-          <svg className="shrink-0 mt-0.5 text-amber-500" width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
-            <path d="M8 1a7 7 0 100 14A7 7 0 008 1zM7 5a1 1 0 112 0v4a1 1 0 11-2 0V5zm1 7a1 1 0 110-2 1 1 0 010 2z"/>
-          </svg>
-          <div>
-            <p className="text-sm font-semibold text-amber-800 dark:text-amber-300 mb-1">
-              SVG recording
-            </p>
-            <p className="text-xs text-amber-700 dark:text-amber-400 leading-relaxed">
-              SVG captures are vector files containing editable elements. Apply privacy redactions in an SVG editor (Inkscape, Illustrator, or Figma) before sharing.
-            </p>
-          </div>
-        </div>
       </div>
     );
   }
@@ -340,20 +326,25 @@ export function PIICanvas({ step }: PIICanvasProps) {
 
   async function applyToRegion(region: RegionSelection) {
     if (!activeTool || !activeSessionId) return;
-    const entry: LedgerEntry = {
-      id: crypto.randomUUID(),
-      operationType: activeTool,
-      rrwebId: null,
-      elementSelector: region.selector,
-      blurRadius: activeTool === "blur" ? blurSettings.radius : null,
-      pixelCellSize: activeTool === "pixelate" ? pixelateSettings.cellSize : null,
-      redactColor: activeTool === "redact" ? redactSettings.color : null,
-      applyGlobally: scope === "global",
-      replacementText: activeTool === "redact" ? redactSettings.label : "",
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    };
-    await applyOperation(entry, scope, activeSessionId, String(step!.stepIndex));
+    
+    const selectors = region.selector.split(",").map(s => s.trim()).filter(Boolean);
+    
+    for (const sel of selectors) {
+      const entry: LedgerEntry = {
+        id: crypto.randomUUID(),
+        operationType: activeTool,
+        rrwebId: null,
+        elementSelector: sel,
+        blurRadius: activeTool === "blur" ? blurSettings.radius : null,
+        pixelCellSize: activeTool === "pixelate" ? pixelateSettings.cellSize : null,
+        redactColor: activeTool === "redact" ? redactSettings.color : null,
+        applyGlobally: scope === "global",
+        replacementText: activeTool === "redact" ? redactSettings.label : "",
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      };
+      await applyOperation(entry, scope, activeSessionId, String(step!.stepIndex));
+    }
   }
 
   async function applyCustom() {
@@ -363,10 +354,22 @@ export function PIICanvas({ step }: PIICanvasProps) {
     setCustomSelector("");
   }
 
-  // Applied ops scoped to current step (region ops) or any step (selector ops)
-  const stepOps = appliedOperations.filter(
-    (op) => op.stepIndex == null || op.stepIndex === step.stepIndex
-  );
+  // Group operations by step
+  const groupedOps = appliedOperations.reduce((acc, op) => {
+    const key = op.applyGlobally ? "Global" : `Step ${op.stepIndex ?? step.stepIndex}`;
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(op);
+    return acc;
+  }, {} as Record<string, LedgerEntry[]>);
+
+  // Sort keys: Global first, then Step 1, Step 2...
+  const sortedKeys = Object.keys(groupedOps).sort((a, b) => {
+    if (a === "Global") return -1;
+    if (b === "Global") return 1;
+    const numA = parseInt(a.replace("Step ", ""), 10) || 0;
+    const numB = parseInt(b.replace("Step ", ""), 10) || 0;
+    return numA - numB;
+  });
 
   return (
     <section aria-label="PII redaction canvas">
@@ -492,7 +495,7 @@ export function PIICanvas({ step }: PIICanvasProps) {
       )}
 
       {/* Candidate regions (selector-based — DOM mode) */}
-      {candidateRegions.length > 0 && (
+      {step?.mimeType === "image/svg+xml" && candidateRegions.length > 0 && (
         <div className="mb-4">
           <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-2 uppercase tracking-wide">
             Detected elements
@@ -513,63 +516,66 @@ export function PIICanvas({ step }: PIICanvasProps) {
       )}
 
       {/* Custom selector input */}
-      <div className="mb-4">
-        <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-2 uppercase tracking-wide">
-          Custom CSS selector
-        </p>
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={customSelector}
-            onChange={(e) => setCustomSelector(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") void applyCustom(); }}
-            placeholder="#email, .phone-number, …"
-            className="flex-1 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            aria-label="Custom CSS selector for PII element"
-          />
-          <button
-            type="button"
-            disabled={!customSelector.trim() || !activeTool}
-            onClick={() => void applyCustom()}
-            className="px-3 py-1.5 text-sm rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
-          >
-            Apply
-          </button>
-        </div>
-      </div>
-
-      {/* Applied operations — scoped to current step */}
-      {stepOps.length > 0 && (
-        <div>
+      {step?.mimeType === "image/svg+xml" && (
+        <div className="mb-4">
           <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-2 uppercase tracking-wide">
-            Applied on this step ({stepOps.length})
+            Custom CSS selector
           </p>
-          <ul className="space-y-1 max-h-40 overflow-y-auto">
-            {stepOps.map((op) => (
-              <li
-                key={op.id}
-                className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400 font-mono"
-              >
-                <span className={`px-1 rounded text-xs font-medium ${
-                  op.operationType === "blur"
-                    ? "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300"
-                    : "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300"
-                }`}>
-                  {op.operationType}
-                </span>
-                {op.region ? (
-                  <span className="truncate text-gray-500">
-                    region {Math.round(op.region.w * 100)}%×{Math.round(op.region.h * 100)}%
-                  </span>
-                ) : (
-                  <span className="truncate">{op.elementSelector}</span>
-                )}
-                {op.applyGlobally && (
-                  <span className="shrink-0 text-gray-400">(global)</span>
-                )}
-              </li>
-            ))}
-          </ul>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={customSelector}
+              onChange={(e) => setCustomSelector(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") void applyCustom(); }}
+              placeholder="#email, .phone-number, …"
+              className="flex-1 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              aria-label="Custom CSS selector for PII element"
+            />
+            <button
+              type="button"
+              disabled={!customSelector.trim() || !activeTool}
+              onClick={() => void applyCustom()}
+              className="px-3 py-1.5 text-sm rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+            >
+              Apply
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Applied operations — grouped by step */}
+      {sortedKeys.length > 0 && (
+        <div className="space-y-4">
+          {sortedKeys.map((groupKey) => (
+            <div key={groupKey}>
+              <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-2 uppercase tracking-wide">
+                {groupKey}
+              </p>
+              <ul className="space-y-1 max-h-40 overflow-y-auto">
+                {groupedOps[groupKey].map((op) => (
+                  <li
+                    key={op.id}
+                    className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400 font-mono"
+                  >
+                    <span className={`px-1 rounded text-xs font-medium ${
+                      op.operationType === "blur"
+                        ? "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300"
+                        : "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300"
+                    }`}>
+                      {op.operationType}
+                    </span>
+                    {op.region ? (
+                      <span className="truncate text-gray-500">
+                        region {Math.round(op.region.w * 100)}%×{Math.round(op.region.h * 100)}%
+                      </span>
+                    ) : (
+                      <span className="truncate">{op.elementSelector}</span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
         </div>
       )}
     </section>
