@@ -1,13 +1,13 @@
 import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
-import type { ProviderConfig } from '../../../src/types/ai';
+import type { ProviderConfig } from '@/types/ai';
 import {
   AuthError,
   QuotaError,
   ScanError,
   NoProviderConfiguredError,
-} from '../../../src/types/ai';
+} from '@/types/ai';
 
-let scan: typeof import('../../../src/ai/pii-scanner').scan;
+let scan: typeof import('@/ai/pii-scanner').scan;
 
 const RAW_FINDINGS = [
   {
@@ -43,13 +43,13 @@ function mockFail(status: number) {
 
 beforeEach(async () => {
   vi.stubGlobal('fetch', vi.fn());
-  const mod = await import('../../../src/ai/pii-scanner');
+  const mod = await import('@/ai/pii-scanner');
   scan = mod.scan;
 });
 
 afterEach(() => {
   vi.unstubAllGlobals();
-  vi.resetModules();
+  // vi.resetModules();
 });
 
 describe('scan() — Anthropic provider', () => {
