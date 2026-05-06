@@ -4,6 +4,7 @@ import { ModeSelector } from "./components/ModeSelector";
 import { CursorToggle } from "./components/CursorToggle";
 import { StatusBadge } from "./components/StatusBadge";
 import { ImageFormatSelector } from "./components/ImageFormatSelector";
+import { RecordingComplete } from "./components/RecordingComplete";
 import { useSession, formatElapsed } from "./hooks/useSession";
 import type { CaptureMode } from "@/types/capture";
 import type { ExtensionMessage } from "@/types/messages";
@@ -21,6 +22,11 @@ export function Popup() {
   const [mode, setMode] = React.useState<CaptureMode>("image-chain");
   const [captureCursor, setCaptureCursor] = React.useState(false);
   const [imageFormat, setImageFormat] = React.useState<"png" | "jpeg">("png");
+
+  const [justStopped, setJustStopped] = React.useState(false);
+  const [stoppedSummary, setStoppedSummary] = React.useState<{
+    steps: number; durationMs: number; mode: CaptureMode;
+  } | null>(null);
 
   // Hook handles global recording state synced with Service Worker
   const {
@@ -44,6 +50,12 @@ export function Popup() {
 
   function handleToggleRecord() {
     if (isRecording) {
+      setStoppedSummary({
+        steps: stepCount ?? 0,
+        durationMs: elapsedMs,
+        mode: captureMode ?? 'image-chain',
+      });
+      setJustStopped(true);
       const msg: ExtensionMessage = { type: "STOP_CAPTURE" };
       chrome.runtime.sendMessage(msg, () => {
         // Optional: Small delay to let the SW finish vaulting before UI refresh
@@ -74,6 +86,33 @@ export function Popup() {
   const shellShadow: React.CSSProperties = { boxShadow: '0 24px 60px rgba(15,20,35,.14), 0 6px 16px rgba(15,20,35,.06)' };
 
   if (loading) return <div className={shell} style={shellShadow} />;
+
+  if (justStopped && stoppedSummary) {
+    return (
+      <div className={shell} style={shellShadow}>
+        <div className="flex items-center gap-[10px] border-b border-[oklch(0.94_0.005_258)]" style={{ padding: '14px 16px 10px' }}>
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+            <defs>
+              <linearGradient id="vs-idle-logo" x1="0" y1="0" x2="20" y2="20" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stopColor="oklch(0.62 0.19 258)"/>
+                <stop offset="100%" stopColor="oklch(0.58 0.19 25)"/>
+              </linearGradient>
+            </defs>
+            <rect width="20" height="20" rx="5" fill="url(#vs-idle-logo)"/>
+            <path d="M5 10h10M10 5v10" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
+          </svg>
+          <span className="text-sm font-semibold" style={{ color: '#1d2230' }}>ToyoSnap</span>
+        </div>
+        <RecordingComplete
+          steps={stoppedSummary.steps}
+          durationMs={stoppedSummary.durationMs}
+          mode={stoppedSummary.mode}
+          onOpenStudio={() => { openEditor(); setJustStopped(false); }}
+          onDismiss={() => setJustStopped(false)}
+        />
+      </div>
+    );
+  }
 
   // ── Recording state ─────────────────────────────────────────────────────
   if (isRecording) {
