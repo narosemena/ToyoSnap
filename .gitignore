@@ -10,3 +10,6 @@ playwright-report/
 .graphify_detect.json
 .graphify_python
 .graphify_uncached.txt
+gemini-task*.txt
+gemini-task*-output.txt
+.superpowers/
