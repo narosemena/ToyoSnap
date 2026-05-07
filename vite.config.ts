@@ -4,8 +4,18 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import webExtension from "vite-plugin-web-extension";
 import path from "path";
+import { execSync } from "child_process";
 import manifest from "./src/manifest";
+import pkg from "./package.json";
 import type { Plugin } from "vite";
+
+const buildHash = (() => {
+  try {
+    return execSync("git rev-parse --short HEAD").toString().trim();
+  } catch {
+    return "unknown";
+  }
+})();
 
 /**
  * Chrome's extension loader rejects any file or directory at the extension
@@ -59,6 +69,10 @@ function escapeNonCharacters(): Plugin {
 }
 
 export default defineConfig({
+  define: {
+    __APP_VERSION__: JSON.stringify(pkg.version),
+    __BUILD_HASH__: JSON.stringify(buildHash),
+  },
   plugins: [
     react(),
     tailwindcss(),

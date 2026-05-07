@@ -4,7 +4,7 @@ import { useEditorStore } from "./store/editor-store";
 import { usePIIStore } from "./store/pii-store";
 import { getAllSessions, getStepsBySession, purgeSession, purgeExpiredSessions, putSession } from "@/storage/ephemeral-db";
 import { getAllGlobalLedgerEntries, getLocalLedgerEntriesBySession } from "@/storage/ephemeral-db";
-import type { CaptureSession, CaptureStep } from "@/types/capture";
+import type { CaptureSession, CaptureStep, CaptureMode } from "@/types/capture";
 import { LiveAnnouncer } from "./components/LiveAnnouncer";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { SkeletonStep } from "./components/SkeletonStep";
@@ -90,6 +90,7 @@ function Editor() {
     setSteps((prev) => prev.map((s) =>
       s.sessionId === updated.sessionId && s.stepIndex === updated.stepIndex ? updated : s
     )), []);
+  const sessionMode = (sessions.find((s) => s.id === activeSessionId)?.mode ?? undefined) as CaptureMode | undefined;
   const [showExportWarning, setShowExportWarning] = React.useState(false);
   const [rightTab, setRightTab] = React.useState<RightPanelTab>("pii");
   const [checkedIds, setCheckedIds] = React.useState<Set<string>>(new Set());
@@ -398,7 +399,7 @@ function Editor() {
             <ErrorBoundary name="main-content">
               {/* Timeline strip */}
               <div className="border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shrink-0">
-                <StepTimeline steps={steps} />
+                <StepTimeline steps={steps} sessionMode={sessionMode} />
               </div>
 
               {/* Step viewer + right panel */}
@@ -408,6 +409,7 @@ function Editor() {
                   <StepViewer
                     step={steps.find((s) => s.stepIndex === activeStepIndex) ?? steps[0] ?? null}
                     onStepUpdated={handleStepUpdated}
+                    sessionMode={sessionMode}
                   />
                 </section>
 

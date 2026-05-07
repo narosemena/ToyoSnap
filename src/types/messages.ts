@@ -1,4 +1,4 @@
-import type { CaptureMode, ActionStep } from "./capture";
+import type { CaptureMode, ActionStep, SvgTextElement } from "./capture";
 
 export type ExtensionMessage =
   | { type: "START_CAPTURE"; payload: { mode: CaptureMode; captureCursor: boolean; imageFormat?: "png" | "jpeg" } }
@@ -12,6 +12,7 @@ export type ExtensionMessage =
   | { type: "RRWEB_BATCH"; payload: { sessionId: string; events: unknown[]; url?: string; pageTitle?: string } }
   | { type: "CAPTURE_IMAGE_STEP"; payload: { sessionId: string; url: string; pageTitle: string } }
   | { type: "STORE_BLOB_STEP"; payload: { sessionId: string; url: string; pageTitle: string; base64: string; mimeType: string } }
+  | { type: "CAPTURE_SVG_STEP"; payload: { sessionId: string; url: string; pageTitle: string; viewportWidth: number; viewportHeight: number; textElements: SvgTextElement[] } }
   | { type: "EXPORT_SESSION_DATA"; payload: { sessionId: string } }
   | { type: "DESIGN_SYSTEM_SAVED"; payload: { sessionId: string; designSystem?: import("./design-system").DesignSystem } }
   | { type: "PAUSE_CAPTURE" }

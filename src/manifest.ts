@@ -8,6 +8,9 @@ export default {
   manifest_version: 3,
   name: "ToyoSnap",
   version: "0.1.0",
+  // RSA public key that pins the Chrome extension ID to "ocaimfeebaaanidmmklncfdempaeijdf".
+  // Private key is stored in 1Password under "ToyoSnap release key" — never commit the .pem.
+  key: "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtfTj/NezPCd4RxAQS1+4dzAEJjHMSIlj48OJy7DwjKBvqpnX4IyzvngvvPETstvmKOxlFe4cErrAdqX5DtUVSb0etXziTgeJX0BpMbJyA4OlAznwqy0wu/bzh1V4Vszx3uHGZRM5CANNWix5gXxRKulM3tK8bo0A7nL2jBqDYvQ4PuVPNL0ouPwJVk4g7AV/YfNZICuYFXQ5Y3Jd1w76FAqTMZCwIoUBDJYrGTKlBK8+b4nJmRNHw9Dz5QGwcFCEO9k27qvm+gfH7DstN1f/+puZy+8lUuCnXYEZyQhVQ2aS9gPzBao0sXlOEZHLOGKvb1alqXuTLdd+zvJbfuOSIQIDAQAB",
   description: "Zero-Egress WorkflowCapture Engine  -  browser extension for instructional designers",
   icons: {
     "16": "icons/icon16.png",

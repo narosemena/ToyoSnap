@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import type { CaptureStep } from "@/types/capture";
+import type { CaptureStep, CaptureMode } from "@/types/capture";
 import type { LedgerEntry } from "@/types/ledger";
 import { getBlob, getStep, updateStepPageTitle } from "@/storage/ephemeral-db";
 import { useEditorStore } from "@/editor/store/editor-store";
@@ -11,6 +11,7 @@ import "rrweb-player/dist/style.css";
 interface StepViewerProps {
   step: CaptureStep | null;
   onStepUpdated?: (step: CaptureStep) => void;
+  sessionMode?: CaptureMode;
 }
 
 // ——— CSS selector generator for elements inside the rrweb replay iframe ———
@@ -768,7 +769,7 @@ function SvgViewer({ blobId, step }: { blobId: string; step: CaptureStep }) {
 
 // ——— StepViewer ——————————————————————————————————————————————————————————
 
-export function StepViewer({ step, onStepUpdated }: StepViewerProps) {
+export function StepViewer({ step, sessionMode, onStepUpdated }: StepViewerProps) {
   const [fullStep, setFullStep] = useState<CaptureStep | null>(null);
   const [loading, setLoading] = useState(false);
   const [editingLabel, setEditingLabel] = useState(false);
@@ -858,10 +859,11 @@ export function StepViewer({ step, onStepUpdated }: StepViewerProps) {
 
   const hasRrweb = Boolean(fullStep.rrwebEvents?.length);
   const hasBlob = Boolean(fullStep.blobId);
-  // Use explicit mimeType when available; fall back to legacy heuristic for
-  // steps recorded before mimeType was added to the schema.
   const isVideo = hasBlob && !hasRrweb &&
     (fullStep.mimeType ? fullStep.mimeType === "video/webm" : !fullStep.actionStep);
+  const _blobMimeType = isVideo
+    ? "video/webm"
+    : (fullStep.mimeType ?? (sessionMode === "svg" ? "image/svg+xml" : "image/png"));
 
   return (
     <section
@@ -901,7 +903,7 @@ export function StepViewer({ step, onStepUpdated }: StepViewerProps) {
         {!hasRrweb && hasBlob && fullStep.blobId && (
           isVideo
             ? <VideoViewer blobId={fullStep.blobId} />
-            : fullStep.mimeType === "image/svg+xml"
+            : (fullStep.mimeType === "image/svg+xml" || sessionMode === "svg")
               ? <SvgViewer blobId={fullStep.blobId} step={fullStep} />
               : (
                 <div className="relative w-full">

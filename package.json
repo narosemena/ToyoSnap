@@ -18,11 +18,11 @@
     "test:coverage": "vitest run tests/unit/ --coverage",
     "test:e2e": "playwright test --config=tests/playwright.config.ts tests/e2e/",
     "test:a11y": "playwright test --config=tests/playwright.config.ts tests/e2e/accessibility.spec.ts",
-    "test": "npm run test:security && npm run test:unit && npm run test:e2e"
+    "test": "npm run test:security && npm run test:unit && npm run test:e2e",
+    "package": "npm run build && web-ext build --source-dir=dist --artifacts-dir=web-ext-artifacts --overwrite-dest"
   },
   "dependencies": {
     "docx": "9.6.1",
-    "dom-to-svg": "0.12.2",
     "dompurify": "^3.0.0",
     "idb": "8.0.3",
     "immer": "11.1.4",

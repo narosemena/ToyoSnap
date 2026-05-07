@@ -13,3 +13,13 @@ playwright-report/
 gemini-task*.txt
 gemini-task*-output.txt
 .superpowers/
+web-ext-artifacts/
+*.pem
+*.zip
+*.crx
+sbom.json
+licenses.json
+*.tsbuildinfo
+fix_mojibake.py
+instructions.md
+.claude/settings.local.json

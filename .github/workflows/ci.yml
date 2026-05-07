@@ -31,7 +31,8 @@ jobs:
         run: npm run lint
 
       - name: Install semgrep
-        run: pip install semgrep
+        run: pip install --break-system-packages semgrep
+        continue-on-error: true
 
       # semgrep p/ registry rules require a SEMGREP_APP_TOKEN in CI.
       # Non-blocking: eslint-plugin-security (above) is the hard SAST gate.

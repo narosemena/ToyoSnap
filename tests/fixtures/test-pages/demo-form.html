@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Acme Corp — Expense Submission</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f5f6fa;
+      color: #1a1a2e;
+      margin: 0;
+      padding: 2rem 1rem;
+    }
+    .page-header {
+      max-width: 680px;
+      margin: 0 auto 2rem;
+    }
+    .logo {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #0057ff;
+      letter-spacing: -0.5px;
+    }
+    .logo span { color: #ff3b00; }
+    h1 { font-size: 1.5rem; margin: 1.5rem 0 0.25rem; }
+    .subtitle { color: #555; font-size: 0.9rem; }
+    .card {
+      max-width: 680px;
+      margin: 0 auto;
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 2px 12px rgba(0,0,0,.08);
+      padding: 2rem;
+    }
+    .section-title {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #888;
+      margin: 1.75rem 0 0.75rem;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 0.5rem;
+    }
+    .section-title:first-of-type { margin-top: 0; }
+    .field { margin-bottom: 1.1rem; }
+    label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 0.3rem;
+      color: #333;
+    }
+    .required::after { content: " *"; color: #ff3b00; }
+    input[type="text"],
+    input[type="date"],
+    input[type="number"],
+    select,
+    textarea {
+      width: 100%;
+      padding: 0.55rem 0.75rem;
+      border: 1.5px solid #ddd;
+      border-radius: 6px;
+      font-size: 0.95rem;
+      color: #1a1a2e;
+      background: #fafafa;
+      transition: border-color 0.15s;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: #0057ff;
+      background: #fff;
+    }
+    .row { display: flex; gap: 1rem; }
+    .row .field { flex: 1; }
+    textarea { resize: vertical; min-height: 80px; }
+    .hint { font-size: 0.78rem; color: #888; margin-top: 0.25rem; }
+    .actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.75rem;
+      margin-top: 2rem;
+      padding-top: 1.25rem;
+      border-top: 1px solid #eee;
+    }
+    button {
+      padding: 0.55rem 1.4rem;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: opacity 0.15s;
+    }
+    button:hover { opacity: 0.85; }
+    .btn-secondary {
+      background: #f0f0f5;
+      color: #444;
+    }
+    .btn-primary {
+      background: #0057ff;
+      color: #fff;
+    }
+    .notice {
+      background: #fff8e1;
+      border: 1px solid #ffe082;
+      border-radius: 6px;
+      padding: 0.75rem 1rem;
+      font-size: 0.82rem;
+      color: #7a5800;
+      margin-bottom: 1.5rem;
+    }
+    .confirmation {
+      display: none;
+      text-align: center;
+      padding: 3rem 2rem;
+    }
+    .confirmation .check {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+    }
+    .confirmation h2 { margin: 0 0 0.5rem; }
+    .confirmation p { color: #555; font-size: 0.9rem; }
+    .ref { font-family: monospace; background: #f0f0f5; padding: 0.2rem 0.5rem; border-radius: 4px; }
+  </style>
+</head>
+<body>
+
+<div class="page-header">
+  <div class="logo">Acme<span>Corp</span></div>
+  <h1>Expense Report Submission</h1>
+  <p class="subtitle">Submit for reimbursement within 30 days of the expense date.</p>
+</div>
+
+<div class="card" id="form-card">
+  <div class="notice">
+    This is a <strong>ToyoSnap demo page</strong>. All data is fictional. Use this page to practice recording a workflow without using real work systems.
+  </div>
+
+  <form id="expense-form" novalidate>
+
+    <div class="section-title">Submitter information</div>
+
+    <div class="row">
+      <div class="field">
+        <label for="first-name" class="required">First name</label>
+        <input type="text" id="first-name" name="first-name" autocomplete="given-name" placeholder="Jane" />
+      </div>
+      <div class="field">
+        <label for="last-name" class="required">Last name</label>
+        <input type="text" id="last-name" name="last-name" autocomplete="family-name" placeholder="Smith" />
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="employee-id" class="required">Employee ID</label>
+      <input type="text" id="employee-id" name="employee-id" placeholder="EMP-00000" maxlength="10" />
+      <p class="hint">Found on your employee badge or HR portal.</p>
+    </div>
+
+    <div class="field">
+      <label for="department">Department</label>
+      <select id="department" name="department">
+        <option value="">— Select —</option>
+        <option>Engineering</option>
+        <option>Product</option>
+        <option>Design</option>
+        <option>Marketing</option>
+        <option>Sales</option>
+        <option>Finance</option>
+        <option>People & Culture</option>
+        <option>Legal</option>
+        <option>Other</option>
+      </select>
+    </div>
+
+    <div class="section-title">Expense details</div>
+
+    <div class="row">
+      <div class="field">
+        <label for="expense-date" class="required">Expense date</label>
+        <input type="date" id="expense-date" name="expense-date" />
+      </div>
+      <div class="field">
+        <label for="amount" class="required">Amount (USD)</label>
+        <input type="number" id="amount" name="amount" min="0.01" step="0.01" placeholder="0.00" />
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="category" class="required">Category</label>
+      <select id="category" name="category">
+        <option value="">— Select —</option>
+        <option>Travel — Airfare</option>
+        <option>Travel — Hotel</option>
+        <option>Travel — Ground transport</option>
+        <option>Meals & Entertainment</option>
+        <option>Software / Subscriptions</option>
+        <option>Office supplies</option>
+        <option>Training & Conferences</option>
+        <option>Other</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="vendor" class="required">Vendor / merchant name</label>
+      <input type="text" id="vendor" name="vendor" placeholder="e.g. Delta Air Lines, Hilton, Figma" />
+    </div>
+
+    <div class="field">
+      <label for="business-purpose" class="required">Business purpose</label>
+      <textarea id="business-purpose" name="business-purpose" placeholder="Briefly describe why this expense was necessary for business…"></textarea>
+      <p class="hint">Be specific enough for your manager to approve without asking follow-up questions.</p>
+    </div>
+
+    <div class="section-title">Project / cost center</div>
+
+    <div class="row">
+      <div class="field">
+        <label for="cost-center">Cost center</label>
+        <input type="text" id="cost-center" name="cost-center" placeholder="CC-0000" />
+      </div>
+      <div class="field">
+        <label for="project-code">Project code (optional)</label>
+        <input type="text" id="project-code" name="project-code" placeholder="PRJ-0000" />
+      </div>
+    </div>
+
+    <div class="section-title">Receipts</div>
+
+    <div class="field">
+      <label for="receipt-ref">Receipt reference</label>
+      <input type="text" id="receipt-ref" name="receipt-ref" placeholder="e.g. attach in next screen, or enter confirmation number" />
+      <p class="hint">For this demo, just type a placeholder — no file upload is needed.</p>
+    </div>
+
+    <div class="actions">
+      <button type="button" class="btn-secondary" onclick="resetForm()">Clear form</button>
+      <button type="submit" class="btn-primary">Submit expense</button>
+    </div>
+
+  </form>
+</div>
+
+<div class="card confirmation" id="confirmation-card">
+  <div class="check">&#10003;</div>
+  <h2>Expense submitted</h2>
+  <p>Your report has been sent to your manager for approval.</p>
+  <p>Reference: <span class="ref" id="ref-number"></span></p>
+  <p style="margin-top:2rem;">
+    <button type="button" class="btn-secondary" onclick="startOver()">Submit another expense</button>
+  </p>
+</div>
+
+<script>
+  document.getElementById("expense-form").addEventListener("submit", function (e) {
+    e.preventDefault();
+    const ref = "EXP-" + Math.floor(100000 + Math.random() * 900000);
+    document.getElementById("ref-number").textContent = ref;
+    document.getElementById("form-card").style.display = "none";
+    document.getElementById("confirmation-card").style.display = "block";
+  });
+
+  function resetForm() {
+    document.getElementById("expense-form").reset();
+  }
+
+  function startOver() {
+    document.getElementById("form-card").style.display = "block";
+    document.getElementById("confirmation-card").style.display = "none";
+    document.getElementById("expense-form").reset();
+  }
+</script>
+
+</body>
+</html>
