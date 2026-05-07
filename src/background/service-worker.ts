@@ -270,9 +270,18 @@ chrome.runtime.onMessage.addListener(
             const stepIndex = (await countStepsBySession(sessionId)) + 1;
             const step: CaptureStep = {
               sessionId, stepIndex, timestamp: Date.now(),
-              url, pageTitle, blobId, rrwebEvents: null, actionStep: null, spotlightSelector: null,
+              url, pageTitle, blobId, mimeType: "image/svg+xml",
+              rrwebEvents: null, actionStep: null, spotlightSelector: null,
             };
             await putStep(step);
+            const hasSession = await getSessionControlPlane();
+            if (hasSession && hasSession.activeSessionId === sessionId) {
+              await setSessionControlPlane({
+                stepCount: stepIndex,
+                activeTabId: sender.tab?.id ?? hasSession.activeTabId,
+              });
+              await broadcastStateUpdate();
+            }
             sendResponse({ ok: true });
           } catch (err) {
             sendResponse({ error: String(err) });

@@ -1,5 +1,6 @@
 import type { BaseCapture } from "./base-capture";
 import type { SvgTextElement } from "@/types/capture";
+import { hideOverlay, showOverlay } from "../content/recording-overlay";
 
 const CAPTURABLE_SELECTORS = [
   'input:not([type="hidden"]):not([type="password"]):not([type="checkbox"]):not([type="radio"])',
@@ -91,17 +92,27 @@ export class SvgCapture implements BaseCapture {
   }
 
   private async onUserClick(_e: MouseEvent): Promise<void> {
-    await chrome.runtime.sendMessage({
-      type: "CAPTURE_SVG_STEP",
-      payload: {
-        sessionId: this.sessionId,
-        url: location.href,
-        pageTitle: document.title,
-        viewportWidth: window.innerWidth,
-        viewportHeight: window.innerHeight,
-        textElements: extractTextElements(),
-      },
-    });
+    if (!chrome.runtime?.id) {
+      console.warn("[ToyoSnap SVG] Extension context invalidated, stopping capture.");
+      return;
+    }
+    hideOverlay();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    try {
+      await chrome.runtime.sendMessage({
+        type: "CAPTURE_SVG_STEP",
+        payload: {
+          sessionId: this.sessionId,
+          url: location.href,
+          pageTitle: document.title,
+          viewportWidth: window.innerWidth,
+          viewportHeight: window.innerHeight,
+          textElements: extractTextElements(),
+        },
+      });
+    } finally {
+      showOverlay();
+    }
   }
 
   async captureStep(_stepIndex: number): Promise<void> {
