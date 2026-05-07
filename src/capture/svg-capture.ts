@@ -95,7 +95,7 @@ export class SvgCapture implements BaseCapture {
       // We attempt to capture; if it fails, we assume a CSS parse error,
       // temporarily disable all stylesheets, capture a degraded version, and restore them.
       let svgDocument: Document;
-      let disabledSheets: CSSStyleSheet[] = [];
+      const disabledSheets: CSSStyleSheet[] = [];
 
       try {
         try {

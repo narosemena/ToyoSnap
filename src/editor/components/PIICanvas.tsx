@@ -6,7 +6,7 @@ import { usePIIStore } from "@/editor/store/pii-store";
 import { PrimitiveInspector } from "./PrimitiveInspector";
 import { scan } from '@/ai/pii-scanner';
 import { applyReplacements } from '@/ai/svg-text-replacer';
-import type { Finding, SvgReplacement, ProviderConfig } from '@/types/ai';
+import type { SvgReplacement, ProviderConfig } from '@/types/ai';
 import { NoProviderConfiguredError, AuthError, QuotaError, ScanError } from '@/types/ai';
 import { getBlob, putBlob } from '@/storage/ephemeral-db';
 

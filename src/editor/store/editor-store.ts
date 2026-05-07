@@ -36,15 +36,15 @@ const LS_REDACT = "toyosnap_redact_settings";
 const LS_PIXELATE = "toyosnap_pixelate_settings";
 
 function loadBlur(): BlurSettings {
-  try { const v = localStorage.getItem(LS_BLUR); if (v) return JSON.parse(v) as BlurSettings; } catch {}
+  try { const v = localStorage.getItem(LS_BLUR); if (v) return JSON.parse(v) as BlurSettings; } catch { /* corrupt storage */ }
   return { radius: 8 };
 }
 function loadRedact(): RedactSettings {
-  try { const v = localStorage.getItem(LS_REDACT); if (v) return JSON.parse(v) as RedactSettings; } catch {}
+  try { const v = localStorage.getItem(LS_REDACT); if (v) return JSON.parse(v) as RedactSettings; } catch { /* corrupt storage */ }
   return { color: "#000000", label: "[REDACTED]" };
 }
 function loadPixelate(): PixelateSettings {
-  try { const v = localStorage.getItem(LS_PIXELATE); if (v) return JSON.parse(v) as PixelateSettings; } catch {}
+  try { const v = localStorage.getItem(LS_PIXELATE); if (v) return JSON.parse(v) as PixelateSettings; } catch { /* corrupt storage */ }
   return { cellSize: 8 };
 }
 

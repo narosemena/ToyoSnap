@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 
 describe('onInstalled welcome tab', () => {
   it('opens welcome.html on first install', async () => {

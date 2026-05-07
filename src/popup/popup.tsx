@@ -5,7 +5,7 @@ import { CursorToggle } from "./components/CursorToggle";
 import { StatusBadge } from "./components/StatusBadge";
 import { ImageFormatSelector } from "./components/ImageFormatSelector";
 import { RecordingComplete } from "./components/RecordingComplete";
-import { useSession, formatElapsed } from "./hooks/useSession";
+import { useSession } from "./hooks/useSession";
 import { OnboardingPopup } from "./components/OnboardingPopup";
 import { OnboardingTour } from "./components/OnboardingTour";
 import type { CaptureMode } from "@/types/capture";
@@ -255,7 +255,7 @@ export function Popup() {
   // ── Idle state ───────────────────────────────────────────────────────────
   return (
     <div className={shell} style={shellShadow}>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-[10px] border-b border-[oklch(0.94_0.005_258)]" style={{ padding: '14px 16px 10px' }}>
         <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
           <defs>
             <linearGradient id="vs-popup-logo-gradient" x1="0" y1="0" x2="20" y2="20" gradientUnits="userSpaceOnUse">
@@ -272,35 +272,38 @@ export function Popup() {
         </div>
       </div>
 
-      <ModeSelector value={activeMode} onChange={setMode} disabled={isRecording} />
+      <div className="flex flex-col gap-[14px]" style={{ padding: '14px 16px 16px' }}>
+        <ModeSelector value={activeMode} onChange={setMode} disabled={isRecording} />
 
-      {activeMode === "image-chain" && (
-        <ImageFormatSelector value={imageFormat} onChange={setImageFormat} disabled={isRecording} />
-      )}
+        {activeMode === "image-chain" && (
+          <ImageFormatSelector value={imageFormat} onChange={setImageFormat} disabled={isRecording} />
+        )}
 
-      <CursorToggle checked={activeCursor} onChange={setCaptureCursor} disabled={isRecording} />
+        <CursorToggle checked={activeCursor} onChange={setCaptureCursor} disabled={isRecording} />
 
-      <button
-        type="button"
-        onClick={handleToggleRecord}
-        className="w-full py-[12px] px-[14px] rounded-[10px] text-sm font-semibold text-white transition-all flex items-center justify-center gap-2 mt-1"
-        style={{ background: 'oklch(0.58 0.19 258)' }}
-      >
-        <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
-          <circle cx="6" cy="6" r="4" fill="white"/>
-        </svg>
-        Start recording
-      </button>
-
-      {hasSessions && (
         <button
           type="button"
-          onClick={openEditor}
-          className="w-full py-1.5 rounded-lg text-xs font-medium border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+          onClick={handleToggleRecord}
+          className="w-full py-[12px] px-[14px] rounded-[10px] text-sm font-semibold text-white transition-all flex items-center justify-center gap-2"
+          style={{ background: 'oklch(0.58 0.19 258)' }}
         >
-          Open Studio
+          <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+            <circle cx="6" cy="6" r="4" fill="white"/>
+          </svg>
+          Start recording
         </button>
-      )}
+
+        {hasSessions && (
+          <button
+            type="button"
+            onClick={openEditor}
+            className="w-full py-[10px] rounded-[10px] text-[13px] font-medium transition-colors hover:bg-gray-50"
+            style={{ background: '#fff', border: '1px solid oklch(0.92 0.008 258)', color: '#454c5a' }}
+          >
+            Open Studio
+          </button>
+        )}
+      </div>
 
       <div
         className="flex items-center gap-2 px-4 py-[10px] text-[11px]"

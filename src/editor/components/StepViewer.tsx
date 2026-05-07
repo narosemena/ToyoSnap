@@ -489,7 +489,7 @@ function SvgViewer({ blobId, step }: { blobId: string; step: CaptureStep }) {
   const { selectedSvgSelectors, setSelectedSvgSelectors } = useEditorStore();
   const { appliedOperations, applyOperation } = usePIIStore();
   const [inlineEdit, setInlineEdit] = useState<{ selector: string, text: string, rect: DOMRect } | null>(null);
-  const [updateTick, setUpdateTick] = useState(0);
+  const [_updateTick, setUpdateTick] = useState(0);
 
   const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
   const [dragCurrent, setDragCurrent] = useState<{ x: number; y: number } | null>(null);
@@ -654,7 +654,7 @@ function SvgViewer({ blobId, step }: { blobId: string; step: CaptureStep }) {
       try {
         const el = containerRef.current?.querySelector(sel);
         if (el) selectedRects.push(el.getBoundingClientRect());
-      } catch {}
+      } catch { /* invalid selector — skip */ }
     });
   }
 
