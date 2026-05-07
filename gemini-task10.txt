@@ -1,0 +1,132 @@
+You are implementing Task 10 of the AI PII Scanner for ToyoSnap (branch: feature/ai-pii-scanner).
+
+Files that already exist:
+- `src/editor/components/ScanOverlay.tsx` — the ScanOverlay component (Props: findings, activeTool, onApply, onDismiss)
+- `src/editor/store/editor-store.ts` — now has scanFindings and setScanFindings
+- `src/types/ai.ts` — Finding type
+- `src/types/ledger.ts` — LedgerEntry, PIIOperationType
+
+## Task 10: StepViewer — mount ScanOverlay for image-chain steps
+
+### Read the file first
+Read `src/editor/components/StepViewer.tsx` in full before making any changes. (It is 886 lines.)
+
+### Step 1: Add ScanOverlay import
+
+At the top of `src/editor/components/StepViewer.tsx`, after the existing imports, add:
+
+```typescript
+import { ScanOverlay } from './ScanOverlay';
+```
+
+(All other imports — useEditorStore, usePIIStore, LedgerEntry — are already present.)
+
+### Step 2: Add scanFindings state and handleApplyFindings inside StepViewer
+
+Inside the `export function StepViewer({ step, onStepUpdated }: StepViewerProps)` component body, after the existing useState declarations, add:
+
+```typescript
+const scanFindings = useEditorStore((s) => s.scanFindings);
+const setScanFindings = useEditorStore((s) => s.setScanFindings);
+const activeTool = useEditorStore((s) => s.activeTool);
+const { applyOperation } = usePIIStore();
+const activeSessionId = useEditorStore((s) => s.activeSessionId);
+const activeStepIndex = useEditorStore((s) => s.activeStepIndex);
+
+async function handleApplyFindings(
+  approved: import('@/types/ai').Finding[],
+  tool: import('@/types/ledger').PIIOperationType,
+) {
+  if (!activeSessionId) return;
+  const stepId = String(activeStepIndex);
+  for (const f of approved) {
+    const entry: LedgerEntry = {
+      id: crypto.randomUUID(),
+      operationType: tool,
+      rrwebId: null,
+      elementSelector: '',
+      region: f.region,
+      blurRadius: tool === 'blur' ? 8 : null,
+      pixelCellSize: tool === 'pixelate' ? 8 : null,
+      redactColor: tool === 'redact' ? '#000000' : null,
+      applyGlobally: false,
+      replacementText: '[REDACTED]',
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+    await applyOperation(entry, 'local', activeSessionId, stepId);
+  }
+  setScanFindings(null);
+}
+```
+
+IMPORTANT: The `useEditorStore` and `usePIIStore` hooks are already used elsewhere in this file (in RrwebViewer and ImageViewer sub-components). The additions above go specifically inside the `StepViewer` function body.
+
+### Step 3: Wrap ImageViewer with relative container and mount ScanOverlay
+
+In the JSX return of `StepViewer`, find this specific section (around line 866-876):
+
+```tsx
+{!hasRrweb && hasBlob && fullStep.blobId && (
+  isVideo
+    ? <VideoViewer blobId={fullStep.blobId} />
+    : fullStep.mimeType === "image/svg+xml"
+      ? <SvgViewer blobId={fullStep.blobId} step={fullStep} />
+      : <ImageViewer
+          blobId={fullStep.blobId}
+          mimeType={fullStep.mimeType ?? "image/png"}
+          step={fullStep}
+        />
+)}
+```
+
+Replace ONLY the `<ImageViewer ... />` branch so it becomes wrapped with a relative container and ScanOverlay:
+
+```tsx
+{!hasRrweb && hasBlob && fullStep.blobId && (
+  isVideo
+    ? <VideoViewer blobId={fullStep.blobId} />
+    : fullStep.mimeType === "image/svg+xml"
+      ? <SvgViewer blobId={fullStep.blobId} step={fullStep} />
+      : (
+        <div className="relative w-full">
+          <ImageViewer
+            blobId={fullStep.blobId}
+            mimeType={fullStep.mimeType ?? "image/png"}
+            step={fullStep}
+          />
+          {scanFindings && scanFindings.length > 0 && (
+            <ScanOverlay
+              findings={scanFindings}
+              activeTool={activeTool}
+              onApply={(approved, tool) => void handleApplyFindings(approved, tool)}
+              onDismiss={() => setScanFindings(null)}
+            />
+          )}
+        </div>
+      )
+)}
+```
+
+### Step 4: Run typecheck
+
+```bash
+npm run typecheck
+```
+
+Must pass with 0 errors.
+
+### Step 5: Run all unit tests
+
+```bash
+npm run test:unit
+```
+
+All tests must pass.
+
+### Step 6: Commit
+
+```bash
+git add src/editor/components/StepViewer.tsx
+git commit -m "feat(ai): mount ScanOverlay in StepViewer for image-chain steps"
+```

@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState as useS } from "react";
 import { createRoot } from "react-dom/client";
 import { useEditorStore } from "./store/editor-store";
 import { usePIIStore } from "./store/pii-store";
-import { getAllSessions, getStepsBySession, purgeSession, purgeExpiredSessions } from "@/storage/ephemeral-db";
+import { getAllSessions, getStepsBySession, purgeSession, purgeExpiredSessions, putSession } from "@/storage/ephemeral-db";
 import { getAllGlobalLedgerEntries, getLocalLedgerEntriesBySession } from "@/storage/ephemeral-db";
 import type { CaptureSession, CaptureStep } from "@/types/capture";
 import { LiveAnnouncer } from "./components/LiveAnnouncer";

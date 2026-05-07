@@ -1,0 +1,99 @@
+<h2>AI Scan Results UX</h2>
+<p class="subtitle">When the scan finishes and PII is detected — how does the user review and apply redactions?</p>
+
+<div class="cards">
+
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#f8f9fb;padding:16px;font-family:system-ui,sans-serif">
+      <!-- Mockup A: Inline overlay -->
+      <div style="position:relative;background:#e8eaf0;border-radius:8px;overflow:hidden;height:160px;display:flex;align-items:center;justify-content:center">
+        <div style="width:88%;height:80%;background:#fff;border-radius:4px;padding:12px;position:relative;font-size:11px;color:#444">
+          <div style="margin-bottom:6px;color:#888;font-size:10px">Email field</div>
+          <div style="margin-bottom:10px">john.smith@acme.com</div>
+          <div style="margin-bottom:6px;color:#888;font-size:10px">Name label</div>
+          <div>John Smith — Product Manager</div>
+          <!-- Highlight overlays -->
+          <div style="position:absolute;top:26px;left:12px;width:148px;height:16px;border:2px solid #f59e0b;background:rgba(245,158,11,0.15);border-radius:3px;display:flex;align-items:center;justify-content:flex-end;padding-right:4px">
+            <span style="font-size:9px;background:#f59e0b;color:#fff;border-radius:2px;padding:1px 4px">email ✓</span>
+          </div>
+          <div style="position:absolute;top:60px;left:12px;width:180px;height:16px;border:2px solid #ef4444;background:rgba(239,68,68,0.15);border-radius:3px;display:flex;align-items:center;justify-content:flex-end;padding-right:4px">
+            <span style="font-size:9px;background:#ef4444;color:#fff;border-radius:2px;padding:1px 4px">name ✓</span>
+          </div>
+        </div>
+        <div style="position:absolute;bottom:8px;right:8px;display:flex;gap:4px">
+          <div style="background:#3b82f6;color:#fff;border-radius:4px;padding:4px 8px;font-size:10px">Apply all</div>
+          <div style="background:#fff;border:1px solid #d1d5db;border-radius:4px;padding:4px 8px;font-size:10px">Review each</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A — Inline Overlay</h3>
+      <p>Detected regions are highlighted directly on the capture. User can approve/reject each finding, then choose a redaction type and apply.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#f8f9fb;padding:16px;font-family:system-ui,sans-serif">
+      <!-- Mockup B: Findings list in sidebar -->
+      <div style="display:flex;gap:8px;height:160px">
+        <!-- Capture preview -->
+        <div style="flex:1;background:#e8eaf0;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#888">capture</div>
+        <!-- Sidebar findings -->
+        <div style="width:130px;background:#fff;border-radius:6px;border:1px solid #e5e7eb;padding:8px;overflow:hidden">
+          <div style="font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">4 findings</div>
+          <div style="margin-bottom:5px">
+            <div style="display:flex;align-items:center;gap:4px;margin-bottom:2px">
+              <input type="checkbox" checked style="width:10px;height:10px" readonly>
+              <span style="font-size:9px;font-weight:600;color:#1f2937">Email</span>
+            </div>
+            <div style="font-size:9px;color:#6b7280;margin-left:14px">john.smith@acme…</div>
+          </div>
+          <div style="margin-bottom:5px">
+            <div style="display:flex;align-items:center;gap:4px;margin-bottom:2px">
+              <input type="checkbox" checked style="width:10px;height:10px" readonly>
+              <span style="font-size:9px;font-weight:600;color:#1f2937">Name</span>
+            </div>
+            <div style="font-size:9px;color:#6b7280;margin-left:14px">John Smith</div>
+          </div>
+          <div style="margin-bottom:5px">
+            <div style="display:flex;align-items:center;gap:4px;margin-bottom:2px">
+              <input type="checkbox" style="width:10px;height:10px" readonly>
+              <span style="font-size:9px;font-weight:600;color:#9ca3af">Phone</span>
+            </div>
+            <div style="font-size:9px;color:#9ca3af;margin-left:14px">+1 (555) 000-…</div>
+          </div>
+          <div style="margin-top:8px;background:#3b82f6;color:#fff;border-radius:4px;padding:4px;font-size:9px;text-align:center">Apply selected</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B — Findings Panel</h3>
+      <p>Results appear as a checklist in the right panel. User reviews the list, unchecks false positives, picks a redaction type, then applies checked items.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#f8f9fb;padding:16px;font-family:system-ui,sans-serif">
+      <!-- Mockup C: Auto-apply with undo -->
+      <div style="position:relative;background:#e8eaf0;border-radius:8px;overflow:hidden;height:160px;display:flex;align-items:center;justify-content:center">
+        <div style="width:88%;height:80%;background:#fff;border-radius:4px;padding:12px;position:relative;font-size:11px;color:#444">
+          <div style="margin-bottom:6px;color:#888;font-size:10px">Email field</div>
+          <!-- Blurred regions -->
+          <div style="margin-bottom:10px;background:#1d2230;color:#1d2230;border-radius:3px;width:160px;height:14px;filter:blur(3px)">john.smith@acme.com</div>
+          <div style="margin-bottom:6px;color:#888;font-size:10px">Name label</div>
+          <div style="background:#1d2230;color:#1d2230;border-radius:3px;width:180px;height:14px;filter:blur(3px)">John Smith — PM</div>
+        </div>
+        <!-- Toast -->
+        <div style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);background:#1f2937;color:#fff;border-radius:6px;padding:5px 10px;font-size:9px;white-space:nowrap;display:flex;align-items:center;gap:8px">
+          <span>4 items redacted</span>
+          <span style="color:#60a5fa;cursor:pointer">Undo</span>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C — Auto-Apply + Undo</h3>
+      <p>Scan immediately applies blur to all detected PII. A toast shows "N items redacted" with an Undo button. No review step — fastest path.</p>
+    </div>
+  </div>
+
+</div>

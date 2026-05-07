@@ -1,0 +1,180 @@
+You are fixing a bug in ToyoSnap, a Manifest V3 Chrome extension (Zero-Egress — no network calls allowed).
+
+## The Problem
+
+SVG exports include off-screen DOM elements (below the fold, hidden in scroll containers, etc.). The final SVG should only contain elements visible within the browser viewport.
+
+The current approach in `src/capture/svg-capture.ts` is broken:
+1. It marks off-screen elements with `data-ts-prune="true"` on the live DOM
+2. Calls `documentToSVG(document)` (from the `dom-to-svg` library)
+3. Then queries `svgDocument.querySelectorAll('[data-ts-prune="true"]')` to remove them
+
+The bug: `documentToSVG` does not reliably transfer arbitrary HTML data attributes to the output SVG elements, so the post-capture query finds nothing and the off-screen elements remain in the export.
+
+## The Fix
+
+Replace the attribute-marking approach with a **display:none hide-before-capture / restore-after** strategy:
+
+1. Before calling `documentToSVG`, identify all elements completely outside the viewport using `getBoundingClientRect()`. Skip `#toyosnap-overlay-host`.
+2. For each off-screen element, save its current `style.display` value and set `el.style.display = 'none'` (so `documentToSVG` skips it entirely — the library respects `display:none`).
+3. Call `documentToSVG(document)`.
+4. **Immediately** restore every element's original `style.display` — this MUST happen in a `finally` block so it always runs even if `documentToSVG` throws.
+
+The existing CSS-fallback retry block (disable stylesheets → retry → restore sheets in finally) must be preserved. Integrate the display:none restore into the same finally-safe pattern.
+
+Also remove the now-dead post-SVG pruning code (the `svgDocument.querySelectorAll('[data-ts-prune="true"]')` block and the `removeAttribute("data-ts-prune")` cleanup loop) since it is no longer needed.
+
+## Exact file to edit
+
+`src/capture/svg-capture.ts` — only this file needs to change.
+
+Here is the current `captureCurrentState` method in full for reference:
+
+```typescript
+private async captureCurrentState(): Promise<void> {
+  try {
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+
+    // --- DOM Pruning: Mark off-screen elements for removal ---
+    const allElements = document.querySelectorAll("body *");
+    const markedElements: Element[] = [];
+
+    for (let i = 0; i < allElements.length; i++) {
+      const el = allElements[i];
+      if (el.id === "toyosnap-overlay-host") continue;
+
+      const rect = el.getBoundingClientRect();
+      const isOffScreen =
+        rect.bottom < 0 ||
+        rect.top > height ||
+        rect.right < 0 ||
+        rect.left > width;
+
+      if (isOffScreen && rect.width > 0 && rect.height > 0) {
+        el.setAttribute("data-ts-prune", "true");
+        markedElements.push(el);
+      }
+    }
+
+    let svgDocument: Document;
+    let disabledSheets: CSSStyleSheet[] = [];
+
+    try {
+      svgDocument = documentToSVG(document);
+    } catch (parseError) {
+      console.warn("[ToyoSnap SVG] First pass failed, likely due to modern CSS syntax. Disabling stylesheets and retrying.", parseError);
+
+      for (let i = 0; i < document.styleSheets.length; i++) {
+        const sheet = document.styleSheets[i];
+        if (!sheet.disabled) {
+          sheet.disabled = true;
+          disabledSheets.push(sheet);
+        }
+      }
+
+      try {
+        svgDocument = documentToSVG(document);
+      } finally {
+        disabledSheets.forEach(sheet => { sheet.disabled = false; });
+      }
+    }
+
+    // --- Cleanup: Remove marked elements from SVG and Live DOM ---
+    const svgPruneTargets = svgDocument.querySelectorAll('[data-ts-prune="true"]');
+    svgPruneTargets.forEach(el => el.remove());
+
+    // Remove marks from live DOM immediately
+    markedElements.forEach(el => el.removeAttribute("data-ts-prune"));
+
+    const svgElement = svgDocument.documentElement as unknown as SVGElement;
+    svgElement.setAttribute("viewBox", `0 0 ${width} ${height}`);
+    svgElement.removeAttribute("width");
+    svgElement.removeAttribute("height");
+
+    this.addLayers(svgElement);
+
+    // ... (image inlining + sendMessage continue unchanged below)
+  }
+}
+```
+
+## What the fixed method should look like (structure):
+
+```typescript
+private async captureCurrentState(): Promise<void> {
+  try {
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+
+    // Collect off-screen elements and their original display values
+    const hiddenElements: Array<{ el: HTMLElement; originalDisplay: string }> = [];
+    const allElements = document.querySelectorAll("body *");
+    for (let i = 0; i < allElements.length; i++) {
+      const el = allElements[i] as HTMLElement;
+      if (el.id === "toyosnap-overlay-host") continue;
+      if (typeof el.style === 'undefined') continue; // SVG/non-HTMLElement nodes
+
+      const rect = el.getBoundingClientRect();
+      const isOffScreen =
+        rect.bottom < 0 ||
+        rect.top > height ||
+        rect.right < 0 ||
+        rect.left > width;
+
+      if (isOffScreen && rect.width > 0 && rect.height > 0) {
+        hiddenElements.push({ el, originalDisplay: el.style.display });
+        el.style.display = 'none';
+      }
+    }
+
+    let svgDocument: Document;
+    let disabledSheets: CSSStyleSheet[] = [];
+
+    try {
+      try {
+        svgDocument = documentToSVG(document);
+      } catch (parseError) {
+        console.warn("[ToyoSnap SVG] First pass failed, retrying without stylesheets.", parseError);
+        for (let i = 0; i < document.styleSheets.length; i++) {
+          const sheet = document.styleSheets[i];
+          if (!sheet.disabled) {
+            sheet.disabled = true;
+            disabledSheets.push(sheet);
+          }
+        }
+        try {
+          svgDocument = documentToSVG(document);
+        } finally {
+          disabledSheets.forEach(sheet => { sheet.disabled = false; });
+        }
+      }
+    } finally {
+      // ALWAYS restore display — even if documentToSVG threw
+      hiddenElements.forEach(({ el, originalDisplay }) => {
+        el.style.display = originalDisplay;
+      });
+    }
+
+    const svgElement = svgDocument.documentElement as unknown as SVGElement;
+    svgElement.setAttribute("viewBox", `0 0 ${width} ${height}`);
+    svgElement.removeAttribute("width");
+    svgElement.removeAttribute("height");
+
+    this.addLayers(svgElement);
+
+    // ... image inlining + sendMessage unchanged ...
+  } catch (err) {
+    console.error("[ToyoSnap SVG] capture completely failed after fallback:", err);
+  }
+}
+```
+
+## Steps
+
+1. Read `src/capture/svg-capture.ts` to confirm current content.
+2. Rewrite `captureCurrentState` using the pattern above. Keep everything else in the file unchanged (constructor, start, stop, captureStep, onUserClick, addLayers, toBase64Chunked). Keep the image inlining block and the `chrome.runtime.sendMessage` call intact — only replace the DOM pruning strategy.
+3. Run `npm run typecheck` — must pass with 0 errors.
+4. Commit: `git add src/capture/svg-capture.ts && git commit -m "fix: prune off-screen DOM elements before SVG capture via display:none instead of post-SVG attribute query"`
+
+Do not touch any other files.
