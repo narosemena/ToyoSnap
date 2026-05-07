@@ -69,7 +69,7 @@ function buildHybridSvg(
     `    <image href="${pngDataUrl}" x="0" y="0" width="${w}" height="${h}"` +
     ` preserveAspectRatio="xMidYMid meet"/>\n` +
     `  </g>\n` +
-    `  <g id="toyosnap-layer-text">\n` +
+    `  <g id="toyosnap-layer-text" opacity="0" aria-hidden="true">\n` +
     `${textNodes}\n` +
     `  </g>\n` +
     `</svg>`
