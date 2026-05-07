@@ -61,16 +61,28 @@ function buildHybridSvg(
     .filter(Boolean)
     .join("\n");
 
+  // Hard viewport clip — prevents Illustrator (and other SVG tools) from
+  // rendering content that falls outside the captured window area.
+  const defs =
+    `  <defs>\n` +
+    `    <clipPath id="toyosnap-viewport">\n` +
+    `      <rect x="0" y="0" width="${w}" height="${h}"/>\n` +
+    `    </clipPath>\n` +
+    `  </defs>\n`;
+
   return (
     `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"` +
     ` width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">\n` +
     `  <title>${escapeXml(pageTitle)}</title>\n` +
-    `  <g id="toyosnap-layer-background">\n` +
-    `    <image href="${pngDataUrl}" x="0" y="0" width="${w}" height="${h}"` +
-    ` preserveAspectRatio="xMidYMid meet"/>\n` +
-    `  </g>\n` +
-    `  <g id="toyosnap-layer-text" opacity="0" aria-hidden="true">\n` +
+    defs +
+    `  <g clip-path="url(#toyosnap-viewport)">\n` +
+    `    <g id="toyosnap-layer-background">\n` +
+    `      <image xlink:href="${pngDataUrl}" href="${pngDataUrl}"` +
+    ` x="0" y="0" width="${w}" height="${h}" preserveAspectRatio="none"/>\n` +
+    `    </g>\n` +
+    `    <g id="toyosnap-layer-text" opacity="0" aria-hidden="true">\n` +
     `${textNodes}\n` +
+    `    </g>\n` +
     `  </g>\n` +
     `</svg>`
   );
