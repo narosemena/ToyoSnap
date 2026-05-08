@@ -23,70 +23,7 @@ import {
   getAllSessions,
 } from "@/storage/ephemeral-db";
 import type { ExtensionMessage } from "@/types/messages";
-import type { CaptureSession, CaptureMode, CaptureStep, SvgTextElement } from "@/types/capture";
-
-// —— SVG helpers ————————————————————————————————————————————————————————————
-
-function escapeXml(str: string): string {
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&apos;");
-}
-
-function buildHybridSvg(
-  pngDataUrl: string,
-  w: number,
-  h: number,
-  pageTitle: string,
-  textElements: SvgTextElement[]
-): string {
-  const textNodes = textElements
-    .map((el) => {
-      const txt = escapeXml(el.text);
-      if (!txt) return "";
-      return (
-        `    <text` +
-        ` x="${el.x}" y="${el.y}"` +
-        ` font-family="${escapeXml(el.fontFamily)}"` +
-        ` font-size="${el.fontSize}"` +
-        ` font-weight="${escapeXml(el.fontWeight)}"` +
-        ` fill="${escapeXml(el.color)}"` +
-        ` data-toyosnap-tag="${el.tag}"` +
-        `>${txt}</text>`
-      );
-    })
-    .filter(Boolean)
-    .join("\n");
-
-  // Hard viewport clip — prevents Illustrator (and other SVG tools) from
-  // rendering content that falls outside the captured window area.
-  const defs =
-    `  <defs>\n` +
-    `    <clipPath id="toyosnap-viewport">\n` +
-    `      <rect x="0" y="0" width="${w}" height="${h}"/>\n` +
-    `    </clipPath>\n` +
-    `  </defs>\n`;
-
-  return (
-    `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"` +
-    ` width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">\n` +
-    `  <title>${escapeXml(pageTitle)}</title>\n` +
-    defs +
-    `  <g clip-path="url(#toyosnap-viewport)">\n` +
-    `    <g id="toyosnap-layer-background">\n` +
-    `      <image xlink:href="${pngDataUrl}" href="${pngDataUrl}"` +
-    ` x="0" y="0" width="${w}" height="${h}" preserveAspectRatio="none"/>\n` +
-    `    </g>\n` +
-    `    <g id="toyosnap-layer-text" opacity="0" aria-hidden="true">\n` +
-    `${textNodes}\n` +
-    `    </g>\n` +
-    `  </g>\n` +
-    `</svg>`
-  );
-}
+import type { CaptureSession, CaptureMode, CaptureStep } from "@/types/capture";
 
 // —— Initialization —————————————————————————————————————————————————————————
 
@@ -159,6 +96,11 @@ chrome.runtime.onMessage.addListener(
       case "STOP_CAPTURE":
         void handleStopCapture();
         sendResponse({ status: "stopping" });
+        break;
+
+      case "TOGGLE_CAPTURE":
+        void handleToggleCapture();
+        sendResponse({ ok: true });
         break;
 
       case "PAUSE_CAPTURE":
@@ -262,45 +204,6 @@ chrome.runtime.onMessage.addListener(
         return true;
       }
 
-      case "CAPTURE_SVG_STEP": {
-        void (async () => {
-          const { sessionId, url, pageTitle, viewportWidth, viewportHeight, textElements } =
-            msg.payload as {
-              sessionId: string;
-              url: string;
-              pageTitle: string;
-              viewportWidth: number;
-              viewportHeight: number;
-              textElements: SvgTextElement[];
-            };
-          try {
-            const pngDataUrl = await chrome.tabs.captureVisibleTab({ format: "png" });
-            const svgString = buildHybridSvg(pngDataUrl, viewportWidth, viewportHeight, pageTitle, textElements);
-            const buffer = new TextEncoder().encode(svgString).buffer;
-            const blobId = crypto.randomUUID();
-            await putBlob(blobId, buffer);
-            const stepIndex = (await countStepsBySession(sessionId)) + 1;
-            const step: CaptureStep = {
-              sessionId, stepIndex, timestamp: Date.now(),
-              url, pageTitle, blobId, mimeType: "image/svg+xml",
-              rrwebEvents: null, actionStep: null, spotlightSelector: null,
-            };
-            await putStep(step);
-            const hasSession = await getSessionControlPlane();
-            if (hasSession && hasSession.activeSessionId === sessionId) {
-              await setSessionControlPlane({
-                stepCount: stepIndex,
-                activeTabId: sender.tab?.id ?? hasSession.activeTabId,
-              });
-              await broadcastStateUpdate();
-            }
-            sendResponse({ ok: true });
-          } catch (err) {
-            sendResponse({ error: String(err) });
-          }
-        })();
-        return true;
-      }
 
       case "STORE_BLOB_STEP": {
         // SVG and video captures generate binary in the content script context.
@@ -379,7 +282,7 @@ async function handleStartCapture(
   mode: CaptureMode,
   captureCursor: boolean,
   sender: chrome.runtime.MessageSender,
-  sendResponse: (r: any) => void,
+  sendResponse: (r: any) => void = () => {},
   imageFormat?: "png" | "jpeg"
 ): Promise<void> {
   let targetTabId = sender.tab?.id;
@@ -537,3 +440,22 @@ chrome.runtime.onInstalled.addListener(({ reason }) => {
     void chrome.tabs.create({ url: chrome.runtime.getURL('src/welcome/welcome.html') });
   }
 });
+
+// —— Keyboard shortcut ——————————————————————————————————————————————————————
+
+chrome.commands.onCommand.addListener((command) => {
+  if (command === 'toggle-capture') void handleToggleCapture();
+});
+
+async function handleToggleCapture(): Promise<void> {
+  const plane = await getSessionControlPlane();
+  if (plane?.isRecording) {
+    await handleStopCapture();
+    return;
+  }
+  const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!activeTab?.id) return;
+  const stored = await chrome.storage.local.get('toyosnap_shortcut_mode');
+  const mode = (stored['toyosnap_shortcut_mode'] as CaptureMode) ?? 'image-chain';
+  await handleStartCapture(mode, false, { tab: activeTab } as chrome.runtime.MessageSender);
+}

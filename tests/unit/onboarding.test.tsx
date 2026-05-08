@@ -42,6 +42,7 @@ describe('OnboardingTour', () => {
     render(<OnboardingTour onDone={onDone} />);
     await userEvent.click(screen.getByRole('button', { name: /next/i }));
     await userEvent.click(screen.getByRole('button', { name: /next/i }));
+    await userEvent.click(screen.getByRole('button', { name: /next/i }));
     await userEvent.click(screen.getByRole('button', { name: /done/i }));
     expect(onDone).toHaveBeenCalled();
   });

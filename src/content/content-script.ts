@@ -62,3 +62,17 @@ void (async () => {
     await startCapture(plane.activeSessionId, plane.captureMode, plane.captureCursor);
   }
 })();
+
+// Keyboard shortcut: Alt+Shift+R -> toggle capture.
+// Uses keydown (not chrome.commands) so this fires in --headless=new via
+// Playwright page.keyboard.press(), which dispatches a real DOM KeyboardEvent.
+document.addEventListener(
+  'keydown',
+  (e: KeyboardEvent) => {
+    if (e.code === 'KeyR' && e.altKey && e.shiftKey && !e.ctrlKey && !e.metaKey) {
+      e.preventDefault();
+      chrome.runtime.sendMessage({ type: 'TOGGLE_CAPTURE' } as ExtensionMessage);
+    }
+  },
+  { capture: true }
+);

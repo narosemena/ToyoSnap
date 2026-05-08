@@ -92,6 +92,43 @@ function WelcomeScreen() {
             top right
           </span>
         </div>
+
+        <div
+          className="rounded-[12px] p-[18px_20px] flex items-center gap-[14px] text-left mt-3"
+          style={{ background: '#fff', border: '1px dashed oklch(0.86 0.05 258)' }}
+        >
+          <div
+            className="w-10 h-10 rounded-[10px] flex-shrink-0 flex items-center justify-center"
+            style={{ background: 'oklch(0.96 0.035 258)', color: 'oklch(0.38 0.14 258)' }}
+          >
+            <svg width="18" height="18" viewBox="0 0 20 20" fill="none"
+              stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"
+              strokeLinejoin="round" aria-hidden="true"
+            >
+              <rect x="2" y="5" width="16" height="11" rx="2"/>
+              <path d="M6 9h1m3 0h1m3 0h1M6 13h8"/>
+            </svg>
+          </div>
+          <div className="flex-1">
+            <div className="text-[14px] font-semibold" style={{ color: '#1d2230' }}>
+              Keyboard shortcut
+            </div>
+            <div className="text-[12px]" style={{ color: '#6a7180' }}>
+              Press{' '}
+              <kbd style={{ fontFamily: 'monospace', background: '#f4f5f8', padding: '1px 5px', borderRadius: 4, border: '1px solid #d4d8e0' }}>
+                Alt+Shift+R
+              </kbd>{' '}
+              to start or stop recording from any tab. Customize at{' '}
+              <span style={{ fontFamily: 'monospace', fontSize: 11 }}>chrome://extensions/shortcuts</span>.
+            </div>
+          </div>
+          <span
+            className="text-[11px] px-[10px] py-[6px] rounded-[6px] whitespace-nowrap"
+            style={{ color: '#454c5a', background: '#f4f5f8', fontFamily: 'monospace' }}
+          >
+            Alt+Shift+R
+          </span>
+        </div>
       </div>
     </div>
   );
