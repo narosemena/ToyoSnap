@@ -29,6 +29,12 @@ export default {
       "128": "icons/icon128.png",
     },
   },
+  commands: {
+    'toggle-capture': {
+      suggested_key: { default: 'Alt+Shift+R' },
+      description: 'Start or stop ToyoSnap recording',
+    },
+  },
   options_page: "src/options/options.html",
   background: {
     service_worker: "src/background/service-worker.ts",

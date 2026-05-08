@@ -16,12 +16,18 @@ const SLIDES = [
     title: 'Review, sanitize, export',
     body: 'Blur PII in Studio, then export locally as .zip, .webm, .html or Markdown.',
   },
+  {
+    icon: 'keyboard',
+    title: 'Keyboard shortcut',
+    body: 'Press Alt+Shift+R to start or stop recording without opening this popup. Customize at chrome://extensions/shortcuts.',
+  },
 ];
 
 const ICON_PATHS: Record<string, string> = {
   record:   'M6 6h8v8H6z',
   cursor:   'M4 4l6 14 2.5-5.5L18 10z',
   download: 'M10 3v10m0 0l-4-4m4 4l4-4M3 17h14',
+  keyboard: 'M2 5h16a1 1 0 011 1v8a1 1 0 01-1 1H2a1 1 0 01-1-1V6a1 1 0 011-1zm3 4h1m3 0h1m3 0h1M5 13h10',
 };
 
 interface Props {

@@ -16,6 +16,9 @@ describe('onInstalled welcome tab', () => {
         onUpdated: { addListener: vi.fn() },
         onRemoved: { addListener: vi.fn() },
       },
+      commands: { 
+        onCommand: { addListener: vi.fn() } 
+      },
       action: { setBadgeText: vi.fn(), setBadgeBackgroundColor: vi.fn() },
       storage: { session: { setAccessLevel: vi.fn() } },
     });
