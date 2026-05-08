@@ -3,6 +3,22 @@ import { hideOverlay, showOverlay } from "../content/recording-overlay";
 
 const SKIP_TAGS = new Set(["script", "style", "noscript", "head", "meta", "link", "title"]);
 
+const SYSTEM_FONT_MAP: Record<string, string> = {
+  'inter': 'Helvetica Neue', 'geist': 'Helvetica Neue', 'geist sans': 'Helvetica Neue',
+  'roboto': 'Helvetica Neue', 'roboto flex': 'Helvetica Neue',
+  'dm sans': 'Arial', 'dm serif display': 'Georgia',
+  'open sans': 'Arial', 'lato': 'Arial', 'source sans pro': 'Arial',
+  'nunito': 'Arial', 'nunito sans': 'Arial', 'work sans': 'Arial',
+  'poppins': 'Arial', 'mulish': 'Arial', 'outfit': 'Arial',
+  'raleway': 'Arial', 'montserrat': 'Arial', 'quicksand': 'Arial',
+  'ubuntu': 'Arial', 'manrope': 'Arial', 'figtree': 'Arial',
+  'plus jakarta sans': 'Arial', 'be vietnam pro': 'Arial',
+  'ibm plex sans': 'Arial', 'ibm plex mono': 'Courier New',
+  'source code pro': 'Courier New', 'jetbrains mono': 'Courier New',
+  'fira code': 'Courier New', 'inconsolata': 'Courier New',
+  'space mono': 'Courier New',
+};
+
 function escapeXml(s: string): string {
   return s
     .replace(/&/g, "&amp;")
@@ -127,8 +143,9 @@ async function walkShapes(
   const rect = el.getBoundingClientRect();
 
   const style = window.getComputedStyle(el);
-  const x = Math.round(rect.left + window.scrollX);
-  const y = Math.round(rect.top + window.scrollY);
+  const isFixed = style.position === 'fixed' || style.position === 'sticky';
+  const x = Math.round(rect.left + (isFixed ? 0 : window.scrollX));
+  const y = Math.round(rect.top + (isFixed ? 0 : window.scrollY));
   const w = Math.round(rect.width);
   const h = Math.round(rect.height);
   if (w <= 0 || h <= 0) return;
@@ -277,7 +294,11 @@ function walkTexts(node: Node, out: string[]): void {
     if (rects.length === 0) return;
 
     const style = window.getComputedStyle(parent);
-    const fontFamily = style.fontFamily.split(",")[0].replace(/['"]/g, "").trim() || "sans-serif";
+    const isFixed = style.position === 'fixed' || style.position === 'sticky';
+    const sx = isFixed ? 0 : window.scrollX;
+    const sy = isFixed ? 0 : window.scrollY;
+    const rawFont = style.fontFamily.split(",")[0].replace(/['"]/g, "").trim() || "sans-serif";
+    const fontFamily = SYSTEM_FONT_MAP[rawFont.toLowerCase()] ?? rawFont;
     const fontSize = parseFloat(style.fontSize) || 14;
     const decoration = style.textDecorationLine || style.textDecoration;
     const ls = parseFloat(style.letterSpacing) || 0;
@@ -304,7 +325,7 @@ function walkTexts(node: Node, out: string[]): void {
     if (rects.length === 1) {
       const r = rects[0];
       out.push(
-        `<text x="${Math.round(r.left + window.scrollX)}" y="${Math.round(r.top + window.scrollY + r.height * 0.75)}"${attrs}>` +
+        `<text x="${Math.round(r.left + sx)}" y="${Math.round(r.top + sy + (r.height - fontSize) / 2 + fontSize * 0.8)}"${attrs}>` +
         `${escapeXml(text)}</text>`
       );
     } else {
@@ -318,7 +339,7 @@ function walkTexts(node: Node, out: string[]): void {
         range2.setEnd(node, wm.index + 1);
         const wr = range2.getClientRects();
         if (!wr.length) continue;
-        const lineIdx = rects.findIndex(r => Math.abs(r.top - wr[0].top) < 2);
+        const lineIdx = rects.findIndex(r => Math.abs(r.top - wr[0].top) < r.height * 0.35);
         if (lineIdx < 0) continue;
         let w = wm[0];
         if (transform === 'uppercase') w = w.toUpperCase();
@@ -329,7 +350,7 @@ function walkTexts(node: Node, out: string[]): void {
       for (let i = 0; i < rects.length; i++) {
         if (!lines[i]) continue;
         const r = rects[i];
-        out.push(`<text x="${Math.round(r.left + window.scrollX)}" y="${Math.round(r.top + window.scrollY + r.height * 0.75)}"${attrs}>${escapeXml(lines[i])}</text>`);
+        out.push(`<text x="${Math.round(r.left + sx)}" y="${Math.round(r.top + sy + (r.height - fontSize) / 2 + fontSize * 0.8)}"${attrs}>${escapeXml(lines[i])}</text>`);
       }
     }
     return;
@@ -368,17 +389,22 @@ function emitFormText(
   const rect = el.getBoundingClientRect();
   if (rect.width <= 0 || rect.height <= 0) return;
   const style = window.getComputedStyle(el);
-  const fontFamily = style.fontFamily.split(",")[0].replace(/['"]/g, "").trim() || "sans-serif";
-  let attrs = 
+  const isFixed = style.position === 'fixed' || style.position === 'sticky';
+  const sx = isFixed ? 0 : window.scrollX;
+  const sy = isFixed ? 0 : window.scrollY;
+  const rawFont = style.fontFamily.split(",")[0].replace(/['"]/g, "").trim() || "sans-serif";
+  const fontFamily = SYSTEM_FONT_MAP[rawFont.toLowerCase()] ?? rawFont;
+  const fs = parseFloat(style.fontSize) || 14;
+  let attrs =
     ` font-family="${escapeXml(fontFamily)}"` +
-    ` font-size="${parseFloat(style.fontSize) || 14}"` +
+    ` font-size="${fs}"` +
     ` font-weight="${escapeXml(style.fontWeight)}"` +
     ` fill="${escapeXml(style.color)}"`;
   if (style.fontStyle.includes("italic") || style.fontStyle.includes("oblique")) {
     attrs += ` font-style="italic"`;
   }
   out.push(
-    `<text x="${Math.round(rect.left + window.scrollX + 4)}" y="${Math.round(rect.top + window.scrollY + rect.height * 0.75)}"${attrs}>` +
+    `<text x="${Math.round(rect.left + sx + 4)}" y="${Math.round(rect.top + sy + (rect.height - fs) / 2 + fs * 0.8)}"${attrs}>` +
     `${escapeXml(value)}</text>`
   );
 }
