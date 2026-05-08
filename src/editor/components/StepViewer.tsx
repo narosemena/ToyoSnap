@@ -632,6 +632,16 @@ function SvgViewer({ blobId, step }: { blobId: string; step: CaptureStep }) {
     setInlineEdit(null);
   }
 
+  // Scale SVG to fit the Studio panel by injecting max-width/height:auto.
+  // The captured SVG has absolute pixel width/height; without this it overflows.
+  const scaledSvgContent = React.useMemo(() => {
+    if (!svgContent) return null;
+    return svgContent.replace(/(<svg\b[^>]*?)(\s*>)/i, (_, open, close) => {
+      const withoutStyle = open.replace(/\s+style="[^"]*"/gi, "");
+      return `${withoutStyle} style="max-width:100%;height:auto;display:block;"${close}`;
+    });
+  }, [svgContent]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-48 text-sm text-gray-500 dark:text-gray-400 motion-safe:animate-pulse">
@@ -639,7 +649,7 @@ function SvgViewer({ blobId, step }: { blobId: string; step: CaptureStep }) {
       </div>
     );
   }
-  if (!svgContent) {
+  if (!scaledSvgContent) {
     return (
       <div className="flex items-center justify-center h-48 text-sm text-red-500">
         Failed to load SVG asset.
@@ -682,7 +692,7 @@ function SvgViewer({ blobId, step }: { blobId: string; step: CaptureStep }) {
       onDoubleClickCapture={handleDoubleClickCapture}
       onMouseLeave={() => { setDragStart(null); setDragCurrent(null); }}
     >
-      <div className="w-full h-auto pointer-events-auto" dangerouslySetInnerHTML={{ __html: svgContent }} />
+      <div className="w-full h-auto pointer-events-auto" dangerouslySetInnerHTML={{ __html: scaledSvgContent }} />
 
       {containerRect && stepOps.map(op => {
         if (!op.elementSelector) return null;

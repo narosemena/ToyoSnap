@@ -2,19 +2,6 @@ import type { eventWithTime } from "rrweb/typings/types";
 
 export type CaptureMode = "video" | "image-chain" | "rrweb" | "svg";
 
-export interface SvgTextElement {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  text: string;
-  fontFamily: string;
-  fontSize: number;
-  fontWeight: string;
-  color: string;
-  tag: string;
-}
-
 export interface ActionStep {
   stepIndex: number;
   timestamp: number;
