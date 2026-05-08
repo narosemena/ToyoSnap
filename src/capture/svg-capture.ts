@@ -62,7 +62,7 @@ function emitGradient(
   ctx: { defs: string[], gradientCounter: number }
 ): string {
   const stops: { color: string; offset: string }[] = [];
-  const stopRegex = /(rgba?\(.*?\)|#[a-fA-F0-9]{3,8}|[a-z]+)\s*(\d+%)?/gi;
+  const stopRegex = /(rgba?\([^)]*\)|#[a-fA-F0-9]{3,8}|[a-z]+)\s*(\d+%)?/gi;
   let m;
   while ((m = stopRegex.exec(bgImage)) !== null) {
     const col = m[1].toLowerCase();
@@ -249,7 +249,7 @@ async function walkShapes(
     }
 
     svgString = svgString.replace(/^<svg[^>]*>/i, (match) => {
-      let tag = match.replace(/\s(x|y|width|height)=["'][^"']*["']/gi, "");
+      const tag = match.replace(/\s(x|y|width|height)=["'][^"']*["']/gi, "");
       return tag.replace(/^<svg/i, `<svg x="${x}" y="${y}" width="${w}" height="${h}"`);
     });
     out.push(svgString);
